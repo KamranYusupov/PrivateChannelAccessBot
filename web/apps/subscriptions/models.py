@@ -2,12 +2,11 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from web.db.model_mixins import AsyncBaseModel
-from web.apps.telegram_users.models import TelegramUser
 
 
 class Subscription(AsyncBaseModel):
-    telegram_user = models.OneToOneField(
-        TelegramUser,
+    telegram_user = models.ForeignKey(
+        "telegram_users.TelegramUser",
         on_delete=models.CASCADE,
         related_name='subscription',
         verbose_name=_('Пользователь Telegram'),
