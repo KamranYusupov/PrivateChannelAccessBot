@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     # Приложения
     'web.apps.telegram_users',
     'web.apps.subscriptions',
+    'web.apps.payments',
 ]
 
 MIDDLEWARE = [
