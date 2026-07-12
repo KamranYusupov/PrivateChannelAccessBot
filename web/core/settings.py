@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from decimal import Decimal
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -121,3 +122,9 @@ BOT_LINK = f'https://t.me/{BOT_USERNAME}'
 MAX_MESSAGE_PER_SECOND = int(os.getenv('MAX_MESSAGE_PER_SECOND', 1))
 
 TELEGRAM_API_URL = 'https://api.telegram.org'
+
+PRIVATE_CHANNEL_ID = os.getenv('PRIVATE_CHANNEL_ID')
+
+SUBSCRIPTION_GLOBAL_AMOUNT = Decimal(os.getenv('SUBSCRIPTION_GLOBAL_AMOUNT', "4500.0"))
+
+YKASSA_TOKEN = os.getenv("YKASSA_TOKEN")
