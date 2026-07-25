@@ -67,7 +67,7 @@ class TariffMixin(models.Model):
     description = models.TextField(_('Описание'))
     price = models.DecimalField(
         max_digits=10,
-        decimal_places=8,
+        decimal_places=2,
         verbose_name=_('Цена'),
     )
 

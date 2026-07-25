@@ -1,2 +1,13 @@
 from django.contrib import admin
-# Register your models here.
+
+from web.apps.subscriptions.models import Subscription, PrivateChannelTariff
+
+
+@admin.register(Subscription)
+class AdminSubscription(admin.ModelAdmin):
+    pass
+
+
+@admin.register(PrivateChannelTariff)
+class AdminPrivateChannelTariff(admin.ModelAdmin):
+    pass

@@ -11,16 +11,16 @@ class MerchantType(models.TextChoices):
 
 
 class ProductType(models.TextChoices):
-    FACE_RATE = 'Face Rate'
-    PRIVATE_CHANNEL_ACCESS = 'Private Channel Access'
-    CONSULTATION = 'Consultation'
+    FACE_RATE = 'Рейт лица'
+    PRIVATE_CHANNEL_ACCESS = 'Доступ в приватку'
+    CONSULTATION = 'Консультация'
 
 
 class Payment(AsyncBaseModel, TimestampMixin):
     """Модель платежа (транзакции)"""
 
     amount = models.DecimalField(
-        max_digits=10,
+        max_digits=20,
         decimal_places=8,
         verbose_name=_('Сумма'),
     )
