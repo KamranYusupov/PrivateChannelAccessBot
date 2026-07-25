@@ -8,7 +8,7 @@ class Subscription(AsyncBaseModel):
     tariff = models.ForeignKey(
         'subscriptions.PrivateChannelTariff',
         db_index=True,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='subscriptions',
         verbose_name=_('Тариф'),
     )
@@ -18,6 +18,12 @@ class Subscription(AsyncBaseModel):
         null=True,
         related_name='subscription',
         verbose_name=_('Пользователь Telegram'),
+    )
+    payment = models.OneToOneField(
+        'payments.Payment',
+        on_delete=models.PROTECT,
+        related_name='subscription',
+        verbose_name=_('Платеж')
     )
     is_active = models.BooleanField(
         _('Активна ли подписка'),
@@ -46,9 +52,9 @@ class Subscription(AsyncBaseModel):
 class PrivateChannelTariff(AsyncBaseModel, TimestampMixin):
     title = models.CharField(
         verbose_name=_("Название"),
-        max_length=255,
+        max_length=100,
     )
-    info_text = models.TextField()
+    description = models.TextField(_('Описание'))
     price = models.DecimalField(
         verbose_name=_('Цена'),
         decimal_places=6,

@@ -32,20 +32,14 @@ class Payment(AsyncBaseModel, TimestampMixin):
     product_type = models.CharField(
         max_length=25,
         choices=ProductType.choices,
+        db_index=True,
         verbose_name=_('Тип покупки'),
     )
     merchant_type = models.CharField(
         max_length=20,
         choices=MerchantType.choices,
+        db_index=True,
         verbose_name=_('Мерчант'),
-    )
-
-    subscription = models.OneToOneField(
-        'subscriptions.Subscription',
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='payment',
-        verbose_name=_('Подписка'),
     )
 
     class Meta:
@@ -54,7 +48,8 @@ class Payment(AsyncBaseModel, TimestampMixin):
         ordering = ['-created_at']
 
     def __str__(self):
+        created_at_str = self.created_at.strftime('%H:%M %d.%m.%Y')
         return (
             f'Платеж ({self.merchant_type}) - {self.amount} '
-            f'| {self.created_at.strftime('%H:%M %d.%m.%Y')}'
+            f'| {created_at_str}'
         )

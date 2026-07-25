@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'web.apps.telegram_users',
     'web.apps.subscriptions',
     'web.apps.payments',
+    'web.apps.face_ratings',
 ]
 
 MIDDLEWARE = [
