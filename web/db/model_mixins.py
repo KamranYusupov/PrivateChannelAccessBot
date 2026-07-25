@@ -55,3 +55,21 @@ class TimestampMixin(models.Model):
 
     class Meta:
         abstract = True
+
+
+class TariffMixin(models.Model):
+    title = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        verbose_name=_('Название'),
+    )
+    description = models.TextField(_('Описание'))
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=8,
+        verbose_name=_('Цена'),
+    )
+
+    class Meta:
+        abstract = True
