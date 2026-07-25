@@ -25,15 +25,8 @@ async def product_tariff_info_handler(
     callback_data = callback.data.split('_')
     product_type_value, tariff_id = callback_data
 
-    product_type_label = ProductCallbackService.get_product_type_label_by_value(
+    tariff_model = ProductCallbackService.get_tariff_model_by_product_type_value(
         product_type_value
-    )
-
-    if not product_type_label:
-        return
-
-    tariff_model = ProductCallbackService.get_tariff_model_by_product_type_label(
-        product_type_label
     )
 
     tariff = await tariff_model.objects.aget(

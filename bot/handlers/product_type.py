@@ -23,8 +23,13 @@ async def choice_product_type(
         await message.answer('Функционал в разработке!')
         return
 
-    tariff_model = ProductCallbackService.get_tariff_model_by_product_type_label(
+    product_type_value = ProductCallbackService.get_product_type_value_by_label(
         message.text
+    )
+    if not product_type_value:
+        return
+    tariff_model = ProductCallbackService.get_tariff_model_by_product_type_value(
+        product_type_value
     )
 
     if not product_type_value or not tariff_model:

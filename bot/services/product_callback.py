@@ -12,9 +12,9 @@ ModelType = TypeVar('ModelType', bound=AsyncBaseModel)
 
 class ProductCallbackService:
     __product_type_model_map = {
-        ProductType.FACE_RATE.label: FaceRateTariff,
-        ProductType.CONSULTATION.label: ConsultationTariff,
-        ProductType.PRIVATE_CHANNEL_ACCESS.label: PrivateChannelTariff
+        ProductType.FACE_RATE.value: FaceRateTariff,
+        ProductType.CONSULTATION.value: ConsultationTariff,
+        ProductType.PRIVATE_CHANNEL_ACCESS.value: PrivateChannelTariff
     }
 
     __product_type_label_to_value_map = {
@@ -27,7 +27,7 @@ class ProductCallbackService:
     }
 
     @classmethod
-    def get_tariff_model_by_product_type_label(
+    def get_tariff_model_by_product_type_value(
             cls,
             product_type_label: str,
     ) -> Type[ModelType] | None:
@@ -37,14 +37,14 @@ class ProductCallbackService:
     def get_product_type_value_by_label(
             cls,
             product_type_label: str,
-    ) -> Type[ModelType] | None:
+    ) -> str | None:
         return cls.__product_type_label_to_value_map.get(product_type_label)
 
     @classmethod
     def get_product_type_label_by_value(
             cls,
             product_type_value: str,
-    ) -> Type[ModelType] | None:
+    ) -> str | None:
         return cls.__product_type_value_to_label_map.get(product_type_value)
 
 
