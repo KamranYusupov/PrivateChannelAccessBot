@@ -5,9 +5,15 @@ from web.db.model_mixins import AsyncBaseModel, TimestampMixin
 
 
 class MerchantType(models.TextChoices):
-    CRYPTO_BOT = 'CryptoBot', 'CryptoBot'
-    YKASSA = 'YKassa', 'ЮKassa'
-    STARS = 'Stars', 'Telegram Stars'
+    CRYPTO_BOT = 'CryptoBot'
+    YKASSA = 'ЮKassa'
+    STARS = 'Telegram Stars'
+
+
+class ProductType(models.TextChoices):
+    FACE_RATE = 'Face Rate'
+    PRIVATE_CHANNEL_ACCESS = 'Private Channel Access'
+    CONSULTATION = 'Consultation'
 
 
 class Payment(AsyncBaseModel, TimestampMixin):
@@ -22,6 +28,11 @@ class Payment(AsyncBaseModel, TimestampMixin):
         default=dict,
         blank=True,
         verbose_name=_('Метаданные'),
+    )
+    product_type = models.CharField(
+        max_length=25,
+        choices=ProductType.choices,
+        verbose_name=_('Тип покупки'),
     )
     merchant_type = models.CharField(
         max_length=20,

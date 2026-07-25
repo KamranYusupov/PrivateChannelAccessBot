@@ -1,5 +1,3 @@
-version: '3.3'
-
 x-function: &base_python
   volumes:
     - ./:/app/:rw  

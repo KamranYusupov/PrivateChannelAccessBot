@@ -13,15 +13,15 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='TelegramUser',
+            name='PrivateChannelTariff',
             fields=[
                 ('id', models.CharField(db_index=True, default=web.db.model_mixins.ulid_default, editable=False, max_length=26, primary_key=True, serialize=False, unique=True)),
-                ('telegram_id', models.BigIntegerField(db_index=True, unique=True, verbose_name='Телеграм ID')),
-                ('username', models.CharField(db_index=True, max_length=70, null=True, unique=True, verbose_name='Имя пользователя')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')),
                 ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Дата последнего обновления')),
-                ('first_name', models.CharField(max_length=100, verbose_name='Имя')),
-                ('last_name', models.CharField(blank=True, default=None, max_length=100, null=True, verbose_name='Фамилия')),
+                ('title', models.CharField(max_length=255, verbose_name='Название')),
+                ('info_text', models.TextField()),
+                ('price', models.DecimalField(decimal_places=6, max_digits=16, verbose_name='Цена')),
+                ('term_days', models.PositiveIntegerField(blank=True, null=True, verbose_name='Срок в днях')),
             ],
             options={
                 'abstract': False,

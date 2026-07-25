@@ -5,14 +5,23 @@ from web.db.model_mixins import AsyncBaseModel
 
 
 class Subscription(AsyncBaseModel):
-    telegram_user = models.ForeignKey(
-        "telegram_users.TelegramUser",
+    tariff = models.ForeignKey(
+        'tariffs.PrivateChannelTariff',
+        db_index=True,
         on_delete=models.CASCADE,
+        related_name='subscriptions',
+        verbose_name=_('Тариф'),
+    )
+    telegram_user = models.OneToOneField(
+        'telegram_users.TelegramUser',
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='subscription',
         verbose_name=_('Пользователь Telegram'),
     )
     is_active = models.BooleanField(
         _('Активна ли подписка'),
+        db_index=True,
         default=True,
     )
     start_at = models.DateTimeField(
@@ -21,6 +30,7 @@ class Subscription(AsyncBaseModel):
     )
     expires_at = models.DateTimeField(
         _('Дата окончания подписки'),
+        db_index=True,
         null=True,
         blank=True,
     )

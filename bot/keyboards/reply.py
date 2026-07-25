@@ -19,20 +19,4 @@ def get_reply_keyboard(
         keyboard=keyboard,
         resize_keyboard=resize_keyboard
     )
-    
-def get_reply_contact_keyboard(
-    text: str = 'Отправить номер телефона 📲'
-) -> ReplyKeyboardMarkup:
-    keyboard = [
-        [KeyboardButton(text=text, request_contact=True)],
-        [KeyboardButton(text='Отмена ❌')]
-    ]
-    
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
-    
-    
-reply_cancel_keyboard = get_reply_keyboard(buttons=('Отмена ❌',))
-reply_keyboard_remove = ReplyKeyboardRemove()
-reply_contact_keyboard = get_reply_contact_keyboard()
 
-    
