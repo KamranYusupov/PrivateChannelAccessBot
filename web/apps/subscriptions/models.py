@@ -46,7 +46,7 @@ class Subscription(AsyncBaseModel):
         verbose_name_plural = _('Подписки')
 
     def __str__(self):
-        return f"Подписка для {self.telegram_user.username or self.telegram_user.telegram_id}"
+        return f'Подписка для {self.telegram_user.username or self.telegram_user.telegram_id}'
 
 
 class PrivateChannelTariff(AsyncBaseModel, TariffMixin, TimestampMixin):
@@ -55,3 +55,10 @@ class PrivateChannelTariff(AsyncBaseModel, TariffMixin, TimestampMixin):
         blank=True,
         null=True,
     )
+
+    class Meta:
+        verbose_name = _('Тариф доступа в приватку')
+        verbose_name_plural = _('Тарифы доступа в приватку')
+
+    def __str__(self):
+        return f'Тариф доступа в приватку на {self.term_days} дней'

@@ -5,14 +5,14 @@ from web.db.model_mixins import AsyncBaseModel, TimestampMixin
 
 
 class MerchantType(models.TextChoices):
-    CRYPTO_BOT = 'crypto_bot', 'USDT (CryptoBot)'
+    CRYPTO_BOT = 'crypto-bot', 'USDT (CryptoBot)'
     YKASSA = 'ykassa', 'Банковской Картой (ЮKassa)'
     # STARS = 'starts', 'Telegram Stars'
 
 
 class ProductType(models.TextChoices):
-    FACE_RATE = "face_rate", "Рейт лица"
-    PRIVATE_CHANNEL_ACCESS = "private_channel", "Доступ в приватку"
+    FACE_RATE = "face-rate", "Рейт лица"
+    PRIVATE_CHANNEL_ACCESS = "private-channel", "Доступ в приватку"
     CONSULTATION = "consultation", "Консультация"
 
 
@@ -53,3 +53,20 @@ class Payment(AsyncBaseModel, TimestampMixin):
             f'Платеж ({self.merchant_type}) - {self.amount} '
             f'| {created_at_str}'
         )
+
+
+class ProcessedCryptoBotWebhook(AsyncBaseModel):
+
+    update_id = models.BigIntegerField(
+        unique=True,
+        db_index=True,
+    )
+    update_type = models.CharField(max_length=50)
+    request_date = models.DateTimeField(
+        db_index=True,
+    )
+    payment = models.ForeignKey(
+        'payments.Payment',
+        on_delete=models.SET_NULL,
+        null=True,
+    )
