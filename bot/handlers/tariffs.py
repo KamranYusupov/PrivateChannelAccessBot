@@ -25,13 +25,9 @@ async def product_tariff_info_handler(
     callback_data = callback.data.split('_')
     product_type_value, tariff_id = callback_data
 
-    loguru.logger.debug(f"Tariff ID: {tariff_id}")
-    loguru.logger.debug(f"product_callback_data: {product_type_value}")
-
     product_type_label = ProductCallbackService.get_product_type_label_by_value(
         product_type_value
     )
-    loguru.logger.debug(f"product_type_label: {product_type_label}")
 
     if not product_type_label:
         return

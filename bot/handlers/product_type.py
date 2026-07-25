@@ -19,6 +19,10 @@ async def choice_product_type(
     product_type_value = ProductCallbackService.get_product_type_value_by_label(
         message.text
     )
+    if product_type_value in (ProductType.FACE_RATE.value, ProductType.CONSULTATION.value):
+        await message.answer('Функционал в разработке!')
+        return
+
     tariff_model = ProductCallbackService.get_tariff_model_by_product_type_label(
         message.text
     )
