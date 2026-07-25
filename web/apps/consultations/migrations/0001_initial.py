@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='PrivateChannelTariff',
+            name='ConsultationTariff',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')),
@@ -23,26 +23,25 @@ class Migration(migrations.Migration):
                 ('title', models.CharField(db_index=True, max_length=100, unique=True, verbose_name='Название')),
                 ('description', models.TextField(verbose_name='Описание')),
                 ('price', models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Цена')),
-                ('term_days', models.PositiveIntegerField(blank=True, null=True, verbose_name='Срок в днях')),
             ],
             options={
                 'abstract': False,
             },
         ),
         migrations.CreateModel(
-            name='Subscription',
+            name='Consultation',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('is_active', models.BooleanField(db_index=True, default=True, verbose_name='Активна ли подписка')),
-                ('start_at', models.DateTimeField(auto_now_add=True, verbose_name='Дата начала подписки')),
-                ('expires_at', models.DateTimeField(blank=True, db_index=True, null=True, verbose_name='Дата окончания подписки')),
-                ('payment', models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name='subscription', to='payments.payment', verbose_name='Платеж')),
-                ('tariff', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='subscriptions', to='subscriptions.privatechanneltariff', verbose_name='Тариф')),
-                ('telegram_user', models.OneToOneField(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='subscription', to='telegram_users.telegramuser', verbose_name='Пользователь Telegram')),
+                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')),
+                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Дата последнего обновления')),
+                ('payment', models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name='consultation', to='payments.payment', verbose_name='Платеж,')),
+                ('tariff', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='consultations', to='consultations.consultationtariff', verbose_name='Тариф')),
+                ('telegram_user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='consultations', to='telegram_users.telegramuser', verbose_name='Пользователь Telegram')),
             ],
             options={
-                'verbose_name': 'Подписка',
-                'verbose_name_plural': 'Подписки',
+                'verbose_name': 'Консультация',
+                'verbose_name_plural': 'Консультации',
+                'ordering': ('-created_at',),
             },
         ),
     ]
