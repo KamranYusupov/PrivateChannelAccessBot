@@ -22,3 +22,18 @@ class TelegramUser(
         blank=True,
         default=None,
     )
+
+    class Meta:
+        verbose_name = _("Пользователь")
+        verbose_name_plural = _("Пользователи")
+        ordering = ("-created_at", )
+
+    def __str__(self):
+        return f"{self.full_name} (ID: {self.telegram_id})"
+
+    @property
+    def full_name(self):
+        last_name = self.last_name or ""
+        return f"{self.first_name} {last_name}"
+
+

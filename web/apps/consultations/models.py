@@ -28,5 +28,13 @@ class Consultation(AsyncBaseModel, TimestampMixin):
         verbose_name=_('Платеж,')
     )
 
+    class Meta:
+        verbose_name = _('Консультация')
+        verbose_name_plural = _('Консультации')
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return f'{self.tariff} - {self.created_at}'
+
 class ConsultationTariff(AsyncBaseModel, TariffMixin, TimestampMixin):
     """Модель тарифа оценки лица"""

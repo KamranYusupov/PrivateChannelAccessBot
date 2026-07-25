@@ -72,4 +72,9 @@ class TariffMixin(models.Model):
     )
 
     class Meta:
+        verbose_name = _('Тариф')
+        verbose_name_plural = _('Тарифы')
         abstract = True
+
+    def __str__(self):
+        return self.title
