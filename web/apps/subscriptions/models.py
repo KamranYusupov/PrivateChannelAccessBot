@@ -25,6 +25,10 @@ class Subscription(models.Model):
         related_name='subscription',
         verbose_name=_('Платеж')
     )
+    invite_link = models.URLField(
+        blank=True,
+        null=True,
+    )
     is_active = models.BooleanField(
         _('Активна ли подписка'),
         db_index=True,
