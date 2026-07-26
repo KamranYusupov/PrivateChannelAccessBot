@@ -1,11 +1,13 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TelegramUserBaseSchema(BaseModel):
-    telegram_id: int 
+    telegram_id: int
     username: Optional[str]
+    first_name: str
+    last_name: Optional[str]
     
     
 class TelegramUserSchema(TelegramUserBaseSchema):
@@ -13,4 +15,4 @@ class TelegramUserSchema(TelegramUserBaseSchema):
     
 
 class TelegramUserCreateSchema(TelegramUserBaseSchema):
-    pass
+    telegram_id: int = Field(alias="id")

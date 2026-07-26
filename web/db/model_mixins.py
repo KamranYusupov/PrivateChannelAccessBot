@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -15,6 +17,20 @@ class AbstractTelegramUser(models.Model):
         db_index=True,
         null=True,
     )
+
+    class Manager(models.Manager):
+        async def get_id_by_telegram_id(
+                self,
+                telegram_id: int,
+        ) -> Optional[int]:
+            user = await (
+                self.filter(telegram_id=telegram_id)
+                .only('id')
+                .afirst()
+            )
+            return user.id if user else None
+
+    objects = Manager()
     
     class Meta: 
         abstract = True

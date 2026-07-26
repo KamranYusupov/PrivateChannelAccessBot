@@ -1,0 +1,3 @@
+
+
+class PaymentAlreadyProcessed(Exception): ...

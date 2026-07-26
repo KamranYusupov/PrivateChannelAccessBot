@@ -1,3 +1,6 @@
+from typing import Optional
+
+from asgiref.sync import sync_to_async
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -28,6 +31,11 @@ class Subscription(models.Model):
     invite_link = models.URLField(
         blank=True,
         null=True,
+        default=None,
+    )
+    is_invite_link_sent = models.BooleanField(
+        default=False,
+        db_index=True,
     )
     is_active = models.BooleanField(
         _('Активна ли подписка'),
@@ -59,6 +67,17 @@ class PrivateChannelTariff(AbstractTariff, TimestampMixin):
         blank=True,
         null=True,
     )
+
+    class Manager(models.Manager):
+        def get_term_days_by_id(self, tariff_id: int) -> Optional[int]:
+            tariff = self.filter(id=tariff_id).only('term_days').first()
+            return tariff.term_days if tariff else None
+
+        @sync_to_async
+        def aget_term_days_by_id(self, tariff_id: int) -> Optional[int]:
+            return self.get_term_days_by_id(tariff_id)
+
+    objects = Manager()
 
     class Meta:
         verbose_name = _('Тариф доступа в приватку')

@@ -3,7 +3,7 @@ from aiogram import Router, types, F, html
 from django.core.exceptions import ObjectDoesNotExist
 
 from bot.keyboards.inline import get_inline_keyboard
-from bot.services.product_callback import (
+from services.infra.product_callback import (
     ProductCallbackService,
     ProductType,
 )
@@ -12,6 +12,7 @@ from web.apps.consultations.models import ConsultationTariff
 from web.apps.face_rates.models import FaceRateTariff
 from web.apps.payments.models import ProductType
 from web.apps.subscriptions.models import PrivateChannelTariff
+from web.db.orm_utils import aget_or_none
 
 router = Router()
 
@@ -30,9 +31,8 @@ async def product_tariff_info_handler(
         product_type_value
     )
 
-    try:
-        tariff = await tariff_model.objects.aget(id=tariff_id)
-    except ObjectDoesNotExist:
+    tariff = await aget_or_none(tariff_model.objects.all(), id=tariff_id)
+    if not tariff:
         await callback.message.delete()
         return
 

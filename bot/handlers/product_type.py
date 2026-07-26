@@ -2,7 +2,7 @@ import loguru
 from aiogram import Router, types, F, html
 
 from bot.keyboards.inline import get_inline_keyboard
-from bot.services.product_callback import (
+from services.infra.product_callback import (
     ProductCallbackService,
 )
 from web.apps.consultations.models import ConsultationTariff
@@ -16,28 +16,29 @@ router = Router()
 async def choice_product_type(
         message: types.Message,
 ):
-    product_type_value = ProductCallbackService.get_product_type_value_by_label(
+    product_type = ProductCallbackService.get_product_type_by_label(
         message.text
     )
-    if product_type_value in (ProductType.FACE_RATE.value, ProductType.CONSULTATION.value):
+    if not product_type:
+        return
+
+    if product_type in (ProductType.FACE_RATE.value, ProductType.CONSULTATION.value):
         await message.answer('Функционал в разработке!')
         return
 
-    product_type_value = ProductCallbackService.get_product_type_value_by_label(
-        message.text
-    )
-    if not product_type_value:
+    if product_type != ProductType.PRIVATE_CHANNEL_ACCESS:
         return
+
     tariff_model = ProductCallbackService.get_tariff_model_by_product_type_value(
-        product_type_value
+        product_type.value
     )
 
-    if not product_type_value or not tariff_model:
+    if not product_type.value or not tariff_model:
         return
 
     tariffs = tariff_model.objects.all()
     inline_buttons = {
-        tariff.title: f'{product_type_value}_{tariff.id}'
+        tariff.title: f'{product_type.value}_{tariff.id}'
         async for tariff in tariffs
     }
     sizes = (1,) * len(inline_buttons)

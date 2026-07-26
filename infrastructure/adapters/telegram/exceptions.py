@@ -4,8 +4,7 @@ class TelegramAPIError(Exception):
         self.error_code = error_code
         super().__init__(message)
 
-class TelegramBadRequest(TelegramAPIError):
-    pass
+class TelegramBadRequest(TelegramAPIError): ...
 
 class TelegramRetryAfter(TelegramAPIError):
     def __init__(self, error_code: int, retry_after: int):
@@ -15,8 +14,6 @@ class TelegramRetryAfter(TelegramAPIError):
             error_code=error_code,
         )
 
-class TelegramNetworkError(Exception):
-    pass
+class TelegramNetworkError(Exception): ...
 
-class TelegramForbidden(TelegramAPIError):
-    pass
+class TelegramForbidden(TelegramAPIError): ...
