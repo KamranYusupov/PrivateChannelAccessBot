@@ -13,22 +13,22 @@ class TelegramBotSyncClient:
 
     def __init__(self, token: str):
         self.base_url = (
-            f"https://api.telegram.org/bot{token}"
+            f'https://api.telegram.org/bot{token}'
         )
 
     @staticmethod
     def _raise_error(response_data: Dict[str, Any]) -> NoReturn:
         exc_data = {
-            "message": response_data["description"],
-            "error_code": response_data["error_code"],
+            'message': response_data['description'],
+            'error_code': response_data['error_code'],
         }
-        match response_data["error_code"]:
+        match response_data['error_code']:
             case 400:
                 raise TelegramBadRequest(**exc_data)
             case 429:
                 raise TelegramRetryAfter(
                     **exc_data,
-                    retry_after=response_data["parameters"]["retry_after"],
+                    retry_after=response_data['parameters']['retry_after'],
                 )
             case 403:
                 raise TelegramForbidden(**exc_data)
@@ -43,7 +43,7 @@ class TelegramBotSyncClient:
     ) -> Dict[str, Any]:
         try:
             response = requests.post(
-                f"{self.base_url}/{method}",
+                f'{self.base_url}/{method}',
                 json=payload,
                 timeout=timeout
             )
@@ -52,10 +52,10 @@ class TelegramBotSyncClient:
 
         data = response.json()
 
-        if not data["ok"]:
+        if not data['ok']:
             self._raise_error(data)
 
-        return data["result"]
+        return data['result']
 
 
     def create_chat_invite_link(
@@ -64,14 +64,14 @@ class TelegramBotSyncClient:
         member_limit: int = 1,
     ) -> str:
         result = self._post_request(
-            "createChatInviteLink",
+            'createChatInviteLink',
             payload={
-                "chat_id": chat_id,
-                "member_limit": member_limit,
+                'chat_id': chat_id,
+                'member_limit': member_limit,
             },
         )
 
-        return result["invite_link"]
+        return result['invite_link']
 
 
     def send_message(
@@ -80,11 +80,11 @@ class TelegramBotSyncClient:
         text: str,
     ) -> Dict[str, Any]:
         result = self._post_request(
-            "sendMessage",
+            'sendMessage',
             payload={
-                "chat_id": chat_id,
-                "text": text,
-                "parse_mode": "HTML",
+                'chat_id': chat_id,
+                'text': text,
+                'parse_mode': 'HTML',
             },
         )
 
