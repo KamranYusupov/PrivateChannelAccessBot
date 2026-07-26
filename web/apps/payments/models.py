@@ -37,7 +37,6 @@ class Payment(TimestampMixin):
         default=PaymentStatus.PENDING,
         db_index=True,
     )
-
     product_type = models.CharField(
         max_length=25,
         choices=ProductType.choices,
@@ -59,7 +58,9 @@ class Payment(TimestampMixin):
         max_length=100,
         db_index=True,
         unique=True,
-        verbose_name=_('ID Платежа мерчанта')
+        verbose_name=_('ID Платежа мерчанта'),
+        null=True,
+        default=None,
     )
 
     class Meta:
