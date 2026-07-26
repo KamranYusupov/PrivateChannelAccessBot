@@ -1,6 +1,8 @@
 from typing import Any, Dict, Tuple, NoReturn
 
 import requests
+from django.conf import settings
+
 from infrastructure.adapters.telegram.exceptions import (
     TelegramAPIError,
     TelegramRetryAfter,
@@ -9,12 +11,15 @@ from infrastructure.adapters.telegram.exceptions import (
     TelegramNetworkError,
 )
 
+
 class TelegramBotSyncClient:
 
-    def __init__(self, token: str):
-        self.base_url = (
-            f'https://api.telegram.org/bot{token}'
-        )
+    def __init__(
+            self,
+            bot_token: str = settings.BOT_TOKEN,
+            api_url: str = settings.TELEGRAM_API_URL,
+    ):
+        self.base_url = f'{api_url}/bot{bot_token}/'
 
     @staticmethod
     def _raise_error(response_data: Dict[str, Any]) -> NoReturn:
@@ -35,15 +40,17 @@ class TelegramBotSyncClient:
             case _:
                 raise TelegramAPIError(**exc_data)
 
-    def _post_request(
+    def _request(
             self,
-            method: str,
+            http_method: str,
+            api_method: str,
             payload: Dict[str, Any],
             timeout: int | Tuple[int, int] = (3, 10),
     ) -> Dict[str, Any]:
         try:
-            response = requests.post(
-                f'{self.base_url}/{method}',
+            response = requests.request(
+                http_method,
+                f'{self.base_url}{api_method}',
                 json=payload,
                 timeout=timeout
             )
@@ -57,13 +64,25 @@ class TelegramBotSyncClient:
 
         return data['result']
 
+    def _request_post(
+            self,
+            api_method: str,
+            payload: Dict[str, Any],
+            timeout: int | Tuple[int, int] = (3, 10),
+    ) -> Dict[str, Any]:
+        return self._request(
+            'POST',
+            api_method,
+            payload,
+            timeout
+        )
 
     def create_chat_invite_link(
         self,
         chat_id: int,
         member_limit: int = 1,
     ) -> str:
-        result = self._post_request(
+        result = self._request_post(
             'createChatInviteLink',
             payload={
                 'chat_id': chat_id,
@@ -79,7 +98,7 @@ class TelegramBotSyncClient:
         chat_id: int,
         text: str,
     ) -> Dict[str, Any]:
-        result = self._post_request(
+        result = self._request_post(
             'sendMessage',
             payload={
                 'chat_id': chat_id,

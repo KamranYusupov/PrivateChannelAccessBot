@@ -13,14 +13,10 @@ def execute_with_telegram_retry(
         telegram_bot_method_args: Optional[Iterable[Any]] = None,
         telegram_bot_method_kwargs: Optional[Mapping[str, Any]] = None,
 ):
-    if task_args is None:
-        task_args = ()
-    if task_kwargs is None:
-        task_kwargs = {}
-    if telegram_bot_method_args is None:
-        telegram_bot_method_args = ()
-    if telegram_bot_method_kwargs is None:
-        telegram_bot_method_kwargs = {}
+    task_args = () or task_args
+    task_kwargs = {} or task_kwargs
+    telegram_bot_method_args = () or telegram_bot_method_args
+    telegram_bot_method_kwargs = {} or telegram_bot_method_kwargs
 
     try:
         return telegram_bot_method(
