@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from web.db.model_mixins import TimestampMixin, TariffMixin
+from web.db.model_mixins import TimestampMixin, AbstractTariff
 
 
 class Subscription(models.Model):
@@ -49,7 +49,7 @@ class Subscription(models.Model):
         return f'Подписка для {self.telegram_user.username or self.telegram_user.telegram_id}'
 
 
-class PrivateChannelTariff(models.Model, TariffMixin, TimestampMixin):
+class PrivateChannelTariff(AbstractTariff, TimestampMixin):
     term_days = models.PositiveIntegerField(
         verbose_name=_('Срок в днях'),
         blank=True,

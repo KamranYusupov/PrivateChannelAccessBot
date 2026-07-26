@@ -11,12 +11,19 @@ class MerchantType(models.TextChoices):
 
 
 class ProductType(models.TextChoices):
-    FACE_RATE = "face-rate", "Рейт лица"
-    PRIVATE_CHANNEL_ACCESS = "private-channel", "Доступ в приватку"
-    CONSULTATION = "consultation", "Консультация"
+    FACE_RATE = 'face-rate', 'Рейт лица'
+    PRIVATE_CHANNEL_ACCESS = 'private-channel', 'Доступ в приватку'
+    CONSULTATION = 'consultation', 'Консультация'
 
 
-class Payment(models.Model, TimestampMixin):
+class PaymentStatus(models.TextChoices):
+    PENDING = 'pending', 'Ожидает оплаты'
+    SUCCESS = 'success', 'Успешно'
+    FAILED = 'failed', 'Ошибка'
+    EXPIRED = 'expired', 'Истек'
+    CANCELED = 'canceled', 'Отменен'
+
+class Payment(TimestampMixin):
     """Модель платежа (транзакции)"""
 
     amount = models.DecimalField(
@@ -24,22 +31,35 @@ class Payment(models.Model, TimestampMixin):
         decimal_places=8,
         verbose_name=_('Сумма'),
     )
-    payload = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name=_('Метаданные'),
+    status = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING,
+        db_index=True,
     )
+
     product_type = models.CharField(
         max_length=25,
         choices=ProductType.choices,
         db_index=True,
         verbose_name=_('Тип покупки'),
     )
+    merchant_payload = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_('Метаданные'),
+    )
     merchant_type = models.CharField(
         max_length=20,
         choices=MerchantType.choices,
         db_index=True,
         verbose_name=_('Мерчант'),
+    )
+    merchant_payment_id = models.CharField(
+        max_length=100,
+        db_index=True,
+        unique=True,
+        verbose_name=_('ID Платежа мерчанта')
     )
 
     class Meta:

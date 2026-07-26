@@ -1,10 +1,10 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from web.db.model_mixins import TimestampMixin, TariffMixin
+from web.db.model_mixins import TimestampMixin, AbstractTariff
 
 
-class Consultation(models.Model, TimestampMixin):
+class Consultation(TimestampMixin):
     """Модель оценки лица"""
 
     tariff = models.ForeignKey(
@@ -36,5 +36,5 @@ class Consultation(models.Model, TimestampMixin):
     def __str__(self):
         return f'{self.tariff} - {self.created_at}'
 
-class ConsultationTariff(models.Model, TariffMixin, TimestampMixin):
+class ConsultationTariff(AbstractTariff, TimestampMixin):
     """Модель тарифа оценки лица"""

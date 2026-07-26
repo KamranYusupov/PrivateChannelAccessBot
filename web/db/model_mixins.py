@@ -34,7 +34,7 @@ class TimestampMixin(models.Model):
         abstract = True
 
 
-class TariffMixin(models.Model):
+class AbstractTariff(models.Model):
     title = models.CharField(
         max_length=100,
         unique=True,
