@@ -76,7 +76,7 @@ services:
       context: .
       dockerfile: bot.dockerfile
     container_name: ${PROJECT_NAME}_bot
-    command: python bot/main.py
+    command: python bot/reloader.py
 
   redis:
     image: redis:7.0.11-alpine
