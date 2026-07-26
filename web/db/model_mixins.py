@@ -1,19 +1,8 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from ulid import ULID
 
-from .base_manager import AsyncBaseManager
-
-
-class AsyncBaseModel(models.Model):
-
-    objects = AsyncBaseManager()
-
-    class Meta:
-        abstract = True
         
-        
-class AbstractTelegramUser(AsyncBaseModel):
+class AbstractTelegramUser(models.Model):
     telegram_id = models.BigIntegerField(
         verbose_name=_('Телеграм ID'),
         unique=True,

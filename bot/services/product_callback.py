@@ -1,13 +1,12 @@
 from enum import Enum
-from typing import TypeVar, Type
+from typing import Type
 
+from common.typing import ModelT
 from web.apps.consultations.models import ConsultationTariff
 from web.apps.face_rates.models import FaceRateTariff
 from web.apps.payments.models import ProductType
 from web.apps.subscriptions.models import PrivateChannelTariff
-from web.db.model_mixins import AsyncBaseModel
 
-ModelType = TypeVar('ModelType', bound=AsyncBaseModel)
 
 
 class ProductCallbackService:
@@ -30,7 +29,7 @@ class ProductCallbackService:
     def get_tariff_model_by_product_type_value(
             cls,
             product_type_label: str,
-    ) -> Type[ModelType] | None:
+    ) -> Type[ModelT] | None:
         return cls.__product_type_model_map.get(product_type_label)
 
     @classmethod

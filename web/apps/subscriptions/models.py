@@ -1,10 +1,10 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from web.db.model_mixins import AsyncBaseModel, TimestampMixin, TariffMixin
+from web.db.model_mixins import TimestampMixin, TariffMixin
 
 
-class Subscription(AsyncBaseModel):
+class Subscription(models.Model):
     tariff = models.ForeignKey(
         'subscriptions.PrivateChannelTariff',
         db_index=True,
@@ -49,7 +49,7 @@ class Subscription(AsyncBaseModel):
         return f'Подписка для {self.telegram_user.username or self.telegram_user.telegram_id}'
 
 
-class PrivateChannelTariff(AsyncBaseModel, TariffMixin, TimestampMixin):
+class PrivateChannelTariff(models.Model, TariffMixin, TimestampMixin):
     term_days = models.PositiveIntegerField(
         verbose_name=_('Срок в днях'),
         blank=True,

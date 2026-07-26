@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from web.db.model_mixins import AsyncBaseModel, TimestampMixin
+from web.db.model_mixins import TimestampMixin
 
 
 class MerchantType(models.TextChoices):
@@ -16,7 +16,7 @@ class ProductType(models.TextChoices):
     CONSULTATION = "consultation", "Консультация"
 
 
-class Payment(AsyncBaseModel, TimestampMixin):
+class Payment(models.Model, TimestampMixin):
     """Модель платежа (транзакции)"""
 
     amount = models.DecimalField(
@@ -55,7 +55,7 @@ class Payment(AsyncBaseModel, TimestampMixin):
         )
 
 
-class ProcessedCryptoBotWebhook(AsyncBaseModel):
+class ProcessedCryptoBotWebhook(models.Model):
 
     update_id = models.BigIntegerField(
         unique=True,

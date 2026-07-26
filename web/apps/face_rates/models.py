@@ -1,10 +1,10 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from web.db.model_mixins import AsyncBaseModel, TimestampMixin, TariffMixin
+from web.db.model_mixins import TimestampMixin, TariffMixin
 
 
-class FaceRate(AsyncBaseModel, TimestampMixin):
+class FaceRate(models.Model, TimestampMixin):
     """Модель оценки лица"""
 
     tariff = models.ForeignKey(
@@ -37,12 +37,12 @@ class FaceRate(AsyncBaseModel, TimestampMixin):
         return f'{self.tariff} - {self.created_at}'
 
 
-class FaceRateTariff(AsyncBaseModel, TariffMixin, TimestampMixin):
+class FaceRateTariff(models.Model, TariffMixin, TimestampMixin):
     """Модель тарифа оценки лица"""
 
 
 
-class FaceRatePhoto(AsyncBaseModel):
+class FaceRatePhoto(models.Model):
     face_rate = models.ForeignKey(
         'face_rates.FaceRate',
         on_delete=models.CASCADE,
