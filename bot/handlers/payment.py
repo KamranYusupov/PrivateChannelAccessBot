@@ -4,6 +4,7 @@ import loguru
 from aiogram import Router, types, F, html
 from aiogram.types import LabeledPrice
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from django.core.exceptions import ObjectDoesNotExist
 
 from bot.keyboards.inline import get_inline_keyboard
 from bot.services.product_callback import (
@@ -50,12 +51,13 @@ async def send_ykassa_invoice(
     tariff_model = ProductCallbackService.get_tariff_model_by_product_type_value(
         product_type_value
     )
-    tariff = await tariff_model.objects.aget(id=tariff_id)
-    await callback.message.delete()
 
-    if not tariff:
+    try:
+        tariff = await tariff_model.objects.aget(id=tariff_id)
+    except ObjectDoesNotExist:
         return
-
+    finally:
+        await callback.message.delete()
 
     amount = int(tariff.price) * 100
     invoice_payload = {

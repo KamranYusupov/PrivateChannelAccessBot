@@ -35,10 +35,10 @@ async def choice_product_type(
     if not product_type_value or not tariff_model:
         return
 
-    tariffs = await tariff_model.objects.a_all()
+    tariffs = tariff_model.objects.all()
     inline_buttons = {
         tariff.title: f'{product_type_value}_{tariff.id}'
-        for tariff in tariffs
+        async for tariff in tariffs
     }
     sizes = (1,) * len(inline_buttons)
     await message.answer(

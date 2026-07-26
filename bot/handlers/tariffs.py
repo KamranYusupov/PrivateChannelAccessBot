@@ -1,5 +1,6 @@
 import loguru
 from aiogram import Router, types, F, html
+from django.core.exceptions import ObjectDoesNotExist
 
 from bot.keyboards.inline import get_inline_keyboard
 from bot.services.product_callback import (
@@ -29,10 +30,10 @@ async def product_tariff_info_handler(
         product_type_value
     )
 
-    tariff = await tariff_model.objects.aget(
-        id=tariff_id,
-    )
-    if not tariff:
+    try:
+        tariff = await tariff_model.objects.aget(id=tariff_id)
+    except ObjectDoesNotExist:
+        await callback.message.delete()
         return
 
     message_text = get_product_text(
