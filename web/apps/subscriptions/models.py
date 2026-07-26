@@ -12,7 +12,7 @@ class Subscription(models.Model):
         related_name='subscriptions',
         verbose_name=_('Тариф'),
     )
-    telegram_user = models.OneToOneField(
+    telegram_user = models.ForeignKey(
         'telegram_users.TelegramUser',
         on_delete=models.SET_NULL,
         null=True,
