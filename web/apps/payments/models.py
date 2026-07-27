@@ -19,7 +19,6 @@ class ProductType(models.TextChoices):
 class PaymentStatus(models.TextChoices):
     PENDING = 'pending', 'Ожидает оплаты'
     SUCCESS = 'success', 'Успешно'
-    FAILED = 'failed', 'Ошибка'
     EXPIRED = 'expired', 'Истек'
     CANCELED = 'canceled', 'Отменен'
 

@@ -4,7 +4,7 @@ from json import JSONDecodeError
 import loguru
 from aiogram import Router, types, F
 from aiogram.exceptions import TelegramRetryAfter
-from aiogram.types import LabeledPrice
+from aiogram.types import LabeledPrice, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pydantic
 from django.conf import settings
@@ -12,13 +12,13 @@ from django.conf import settings
 from bot.keyboards.inline import get_inline_keyboard, get_invoice_keyboard
 from bot.loader import bot
 from bot.utils.bot import delete_message_or_pass
-from common.exceptions import PaymentAlreadyProcessed
+from common.exceptions import PaymentAlreadyProcessed, PaymentExpired
 from services.infra.product_callback import (
     ProductCallbackService,
 )
 from services.infra.ykassa_payload import YKASSAPayloadService
 from services.business.payment import PaymentUseCase
-from web.apps.payments.models import MerchantType, Payment
+from web.apps.payments.models import MerchantType, Payment, PaymentStatus
 from web.apps.telegram_users.models import TelegramUser
 from web.db.orm_utils import aget_or_none
 from web.apps.subscriptions.tasks.business.invite_link import (
@@ -141,6 +141,32 @@ async def process_pre_checkout_query(
         )
         return
 
+    payment = await aget_or_none(
+        Payment.objects.all(),
+        id=invoice_payload_schema.payment_id,
+    )
+
+    if not payment:
+        await pre_checkout_query.answer(
+            ok=False,
+            error_message='Ошибка данных. Платеж не найден.'
+        )
+        return
+
+    if payment.status == PaymentStatus.EXPIRED:
+        await pre_checkout_query.answer(
+            ok=False,
+            error_message='Платеж истек. Создайте новый.'
+        )
+        return
+
+    if payment.status == PaymentStatus.CANCELED:
+        await pre_checkout_query.answer(
+            ok=False,
+            error_message='Платеж был отменен. Создайте новый.'
+        )
+        return
+
     await pre_checkout_query.answer(
         ok=True,
     )
@@ -238,4 +264,28 @@ async def successful_payment(
     )
 
 
+@router.callback_query(F.data.startswith('cancel_payment_'))
+async def cancel_payment_handler(
+    callback: types.CallbackQuery,
+):
+    payment_id = callback.data.split('_')[-1]
+    updated = await Payment.objects.filter(
+        id=payment_id,
+        status=PaymentStatus.PENDING
+    ).aupdate(status=PaymentStatus.CANCELED)
 
+    await callback.message.delete()
+
+    if updated > 0:
+        await callback.message.answer(
+            'Платеж успешно закрыт ✅',
+            reply_markup=None,
+        )
+        return
+
+    payment = await aget_or_none(Payment.objects.all(), id=payment_id)
+
+    if payment and payment.status == PaymentStatus.SUCCESS:
+        await callback.message.answer('Чек уже оплачен ✅', reply_markup=None)
+    else:
+        await callback.message.answer('Чек уже недействителен.', reply_markup=None)
