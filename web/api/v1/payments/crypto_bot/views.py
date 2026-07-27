@@ -1,15 +1,22 @@
 from aiogram.types import Invoice
+from django.conf import settings
+from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from common.exceptions import PaymentAlreadyProcessed
+from services.business import payment
 from services.business.payment import PaymentUseCase
 from services.infra.choices.product_type import product_type_helper
 from web.api.v1.payments.crypto_bot.schemas import UpdateWebhookSchema, InvoiceStatus
 from web.apps.payments.models import Payment
 from web.apps.telegram_users.models import TelegramUser
+from web.apps.subscriptions.tasks.business import (
+    create_and_send_invite_link_task,
+)
+from web.apps.telegram_users.tasks.infra import delete_message_task
 
 
 @api_view(['POST'])
@@ -48,16 +55,26 @@ def update_webhook(request: Request):
         )
 
     try:
-        PaymentUseCase.execute(
-            telegram_user_id=telegram_user.id,
-            payment_id=invoice.payload.payment_id,
-            tariff_id=invoice.payload.tariff_id,
-            merchant_payment_id=str(invoice.invoice_id),
-            product_type=product_type,
-        )
+        with transaction.atomic():
+            subscription, payment = PaymentUseCase.execute(
+                telegram_user_id=telegram_user.id,
+                payment_id=invoice.payload.payment_id,
+                tariff_id=invoice.payload.tariff_id,
+                merchant_payment_id=str(invoice.invoice_id),
+                product_type=product_type,
+            )
+            delete_message_task.delay(
+                chat_id=invoice.payload.telegram_id,
+                message_id=payment.invoice_message_id
+            )
+            create_and_send_invite_link_task.delay(
+                user_chat_id=invoice.payload.telegram_id,
+                link_chat_id=settings.PRIVATE_CHANNEL_ID,
+                subscription_id=subscription.id,
+                member_limit=1,
+            )
         return Response(status=status.HTTP_201_CREATED)
     except Payment.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     except PaymentAlreadyProcessed:
         return Response(status=status.HTTP_200_OK)
-

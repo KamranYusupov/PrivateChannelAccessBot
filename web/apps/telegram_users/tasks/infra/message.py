@@ -13,9 +13,7 @@ def send_message_task(
         chat_id: int,
         text: int,
 ) -> None:
-    telegram_bot_client = TelegramBotSyncClient(
-        token=settings.BOT_TOKEN,
-    )
+    telegram_bot_client = TelegramBotSyncClient(settings.BOT_TOKEN)
     execute_with_telegram_retry(
         self,
         task_args=(chat_id, text),
@@ -23,4 +21,17 @@ def send_message_task(
         telegram_bot_method_args=(chat_id, text),
     )
 
+@shared_task(bind=True)
+def delete_message_task(
+        self: Task,
+        chat_id: int,
+        message_id: int,
+) -> None:
+    telegram_bot_client = TelegramBotSyncClient(settings.BOT_TOKEN)
+    execute_with_telegram_retry(
+        self,
+        task_args=(chat_id, message_id),
+        telegram_bot_method=telegram_bot_client.delete_message,
+        telegram_bot_method_args=(chat_id, message_id),
+    )
 

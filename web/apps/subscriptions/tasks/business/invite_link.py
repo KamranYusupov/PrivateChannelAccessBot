@@ -27,9 +27,7 @@ def create_and_send_invite_link_task(
     if subscription.invite_link:
         return
 
-    telegram_bot_client = TelegramBotSyncClient(
-        token=settings.BOT_TOKEN,
-    )
+    telegram_bot_client = TelegramBotSyncClient(settings.BOT_TOKEN)
     invite_link = execute_with_telegram_retry(
         self,
         task_args=(user_chat_id, link_chat_id, subscription_id, member_limit),
@@ -84,9 +82,7 @@ def send_invite_link_text_and_set_invite_link_sent_task(
         chat_id: int,
         subscription_id: int,
 ) -> None:
-    telegram_bot_client = TelegramBotSyncClient(
-        token=settings.BOT_TOKEN,
-    )
+    telegram_bot_client = TelegramBotSyncClient(settings.BOT_TOKEN)
     execute_with_telegram_retry(
         self,
         task_args=(chat_id, text, subscription_id),

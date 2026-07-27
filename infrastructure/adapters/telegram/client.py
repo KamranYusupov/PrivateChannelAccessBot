@@ -45,7 +45,7 @@ class TelegramBotSyncClient:
             http_method: str,
             api_method: str,
             payload: Dict[str, Any],
-            timeout: int | Tuple[int, int] = (3, 10),
+            timeout: int | Tuple[int, int] = (10, 30),
     ) -> Dict[str, Any]:
         try:
             response = requests.request(
@@ -68,7 +68,7 @@ class TelegramBotSyncClient:
             self,
             api_method: str,
             payload: Dict[str, Any],
-            timeout: int | Tuple[int, int] = (3, 10),
+            timeout: int | Tuple[int, int] = (10, 30),
     ) -> Dict[str, Any]:
         return self._request(
             'POST',
@@ -104,6 +104,21 @@ class TelegramBotSyncClient:
                 'chat_id': chat_id,
                 'text': text,
                 'parse_mode': 'HTML',
+            },
+        )
+
+        return result
+
+    def delete_message(
+        self,
+        chat_id: int,
+        message_id: int,
+    ) -> Dict[str, Any]:
+        result = self._request_post(
+            'deleteMessage',
+            payload={
+                'chat_id': chat_id,
+                'message_id': message_id,
             },
         )
 
