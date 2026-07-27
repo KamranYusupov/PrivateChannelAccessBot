@@ -35,6 +35,11 @@ class Payment(TimestampMixin):
         choices=PaymentStatus.choices,
         default=PaymentStatus.PENDING,
         db_index=True,
+        verbose_name=_('Статус'),
+    )
+    expires_at = models.DateTimeField(
+        db_index=True,
+        verbose_name=_('Истекает'),
     )
     invoice_message_id = models.IntegerField(
         _('ID сообщения платежа'),

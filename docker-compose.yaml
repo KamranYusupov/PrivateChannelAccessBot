@@ -92,6 +92,12 @@ services:
       - .env
     restart: on-failure
 
+  scheduler:
+    <<: *base_celery
+    hostname: scheduler
+    container_name: ${PROJECT_NAME}_scheduler
+    command: -A web.core.celery_init beat -l debug
+
   worker:
     <<: *base_celery
     hostname: worker

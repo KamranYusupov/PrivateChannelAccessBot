@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from json import JSONDecodeError
 
 import loguru
@@ -8,6 +9,7 @@ from aiogram.types import LabeledPrice, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pydantic
 from django.conf import settings
+from django.utils import timezone
 
 from bot.keyboards.inline import get_inline_keyboard, get_invoice_keyboard
 from bot.loader import bot
@@ -84,6 +86,10 @@ async def send_ykassa_invoice(
         product_type=product_type,
         merchant_type=MerchantType.YKASSA,
         merchant_payload=invoice_payload,
+        expires_at=(
+            timezone.now()
+            + timedelta(minutes=settings.YKASSA_PAYMENT_EXPIRES_IN_MINUTES)
+        ),
     )
     invoice_keyboard = get_invoice_keyboard(payment.id)
     invoice_payload['payment_id'] = payment.id
