@@ -1,13 +1,17 @@
-from aiogram import types
+from aiogram import types, Bot
 from aiogram.exceptions import TelegramBadRequest
 
 
-async def edit_text_or_answer(
-    message: types.Message,
-    **kwargs,
+async def delete_message_or_pass(
+        bot: Bot,
+        chat_id: int,
+        message_id: int,
 ):
     try:
-        await message.edit_text(**message_data)
+        await bot.delete_message(
+            chat_id,
+            message_id
+        )
     except TelegramBadRequest:
-        await message.answer(**message_data)
+        return
     

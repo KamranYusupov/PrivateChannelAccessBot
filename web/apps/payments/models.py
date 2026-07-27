@@ -37,6 +37,12 @@ class Payment(TimestampMixin):
         default=PaymentStatus.PENDING,
         db_index=True,
     )
+    invoice_message_id = models.IntegerField(
+        _('ID сообщения платежа'),
+        default=None,
+        null=True,
+        blank=True,
+    )
     product_type = models.CharField(
         max_length=25,
         choices=ProductType.choices,
@@ -61,6 +67,7 @@ class Payment(TimestampMixin):
         verbose_name=_('ID Платежа мерчанта'),
         null=True,
         default=None,
+        blank=True,
     )
 
     class Meta:

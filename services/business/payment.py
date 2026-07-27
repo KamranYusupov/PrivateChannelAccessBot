@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Tuple
 
 from asgiref.sync import sync_to_async
 from django.db import transaction
@@ -19,7 +20,7 @@ class PaymentUseCase:
             telegram_user_id: int,
             payment_id: int,
             tariff_id: int,
-    ) -> Subscription:
+    ) -> Tuple[Subscription, Payment]:
         term_days = (
             PrivateChannelTariff.objects
             .get_term_days_by_id(tariff_id)
@@ -43,4 +44,4 @@ class PaymentUseCase:
             payment.status = PaymentStatus.SUCCESS
             payment.save(update_fields=["status"])
 
-        return subscription
+        return subscription, payment

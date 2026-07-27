@@ -9,7 +9,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pydantic
 from django.conf import settings
 
-from bot.keyboards.inline import get_inline_keyboard
+from bot.keyboards.inline import get_inline_keyboard, get_payment_keyboard
+from bot.loader import bot
+from bot.utils.bot import delete_message_or_pass
 from common.exceptions import PaymentAlreadyProcessed
 from services.infra.product_callback import (
     ProductCallbackService,
@@ -22,6 +24,7 @@ from web.db.orm_utils import aget_or_none
 from web.apps.subscriptions.tasks.business.invite_link import (
     create_and_send_invite_link_task,
 )
+from web.apps.payments.tasks import update_payment_invoice_message_id_task
 
 router = Router()
 
@@ -82,17 +85,23 @@ async def send_ykassa_invoice(
         merchant_type=MerchantType.YKASSA,
         merchant_payload=invoice_payload,
     )
+    invoice_keyboard = get_payment_keyboard(payment.id)
     invoice_payload['payment_id'] = payment.id
-    await callback.message.answer_invoice(
+
+    invoice_message = await callback.message.answer_invoice(
         title=tariff.title,
         description=tariff.description,
         payload=json.dumps(invoice_payload),
         provider_token=settings.YKASSA_TOKEN,
+        reply_markup=invoice_keyboard,
         currency='RUB',
         test=True,
         prices=[LabeledPrice(label=tariff.title, amount=amount)],
     )
-
+    update_payment_invoice_message_id_task.delay(
+        payment.id,
+        invoice_message.message_id,
+    )
 
 @router.pre_checkout_query()
 async def process_pre_checkout_query(
@@ -169,9 +178,8 @@ async def successful_payment(
     telegram_user_id = await TelegramUser.objects.get_id_by_telegram_id(
         telegram_id=message.from_user.id,
     )
-    loguru.logger.info(str(telegram_user_id))
     try:
-        subscription = await PaymentUseCase.process_subscription_payment(
+        subscription, payment = await PaymentUseCase.process_subscription_payment(
             telegram_user_id=telegram_user_id,
             payment_id=invoice_payload_schema.payment_id,
             tariff_id=invoice_payload_schema.tariff_id,
@@ -181,6 +189,12 @@ async def successful_payment(
         return
     except PaymentAlreadyProcessed:
         return
+
+    await delete_message_or_pass(
+        bot,
+        chat_id=message.from_user.id,
+        message_id=payment.invoice_message_id,
+    )
 
     try:
         limited_link_obj = await message.bot.create_chat_invite_link(
