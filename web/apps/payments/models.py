@@ -85,20 +85,3 @@ class Payment(TimestampMixin):
             f'Платеж ({self.merchant_type}) - {self.amount} '
             f'| {created_at_str}'
         )
-
-
-class ProcessedCryptoBotWebhook(models.Model):
-
-    update_id = models.BigIntegerField(
-        unique=True,
-        db_index=True,
-    )
-    update_type = models.CharField(max_length=50)
-    request_date = models.DateTimeField(
-        db_index=True,
-    )
-    payment = models.ForeignKey(
-        'payments.Payment',
-        on_delete=models.SET_NULL,
-        null=True,
-    )
