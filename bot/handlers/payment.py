@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import pydantic
 from django.conf import settings
 
-from bot.keyboards.inline import get_inline_keyboard, get_payment_keyboard
+from bot.keyboards.inline import get_inline_keyboard, get_invoice_keyboard
 from bot.loader import bot
 from bot.utils.bot import delete_message_or_pass
 from common.exceptions import PaymentAlreadyProcessed
@@ -85,7 +85,7 @@ async def send_ykassa_invoice(
         merchant_type=MerchantType.YKASSA,
         merchant_payload=invoice_payload,
     )
-    invoice_keyboard = get_payment_keyboard(payment.id)
+    invoice_keyboard = get_invoice_keyboard(payment.id)
     invoice_payload['payment_id'] = payment.id
 
     invoice_message = await callback.message.answer_invoice(

@@ -13,7 +13,7 @@ def get_inline_keyboard(*, buttons: Dict[str, str], sizes: Tuple = (1, 2)):
     return keyboard.adjust(*sizes).as_markup()
 
 
-def get_payment_keyboard(payment_id: int):
+def get_invoice_keyboard(payment_id: int):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text='Оплатить 💳', pay=True)],
