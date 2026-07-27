@@ -27,10 +27,9 @@ class ChangeHandler(FileSystemEventHandler):
             return None
 
         if isinstance(event, (FileCreatedEvent, FileModifiedEvent, FileDeletedEvent)):
-            if settings.DEBUG:
-                logger.info(
-                    f"Detected change in: {event.src_path}. Change type: {event.event_type}"
-                )
+            logger.info(
+                f"Detected change in: {event.src_path}. Change type: {event.event_type}"
+            )
             self.restart_script()
 
     def restart_script(self):
