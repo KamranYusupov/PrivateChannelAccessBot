@@ -215,6 +215,7 @@ async def successful_payment(
             telegram_user_id=telegram_user_id,
             payment_id=invoice_payload_schema.payment_id,
             tariff_id=invoice_payload_schema.tariff_id,
+            merchant_payment_id=message.successful_payment.provider_payment_charge_id
         )
     except Payment.DoesNotExist:
         await message.answer(data_error_msg)

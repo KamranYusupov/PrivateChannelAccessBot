@@ -20,6 +20,7 @@ class PaymentUseCase:
             telegram_user_id: int,
             payment_id: int,
             tariff_id: int,
+            merchant_payment_id: str,
     ) -> Tuple[Subscription, Payment]:
         term_days = (
             PrivateChannelTariff.objects
@@ -42,6 +43,12 @@ class PaymentUseCase:
                 expires_at=subscription_expires_at,
             )
             payment.status = PaymentStatus.SUCCESS
-            payment.save(update_fields=["status"])
+            payment.merchant_payment_id = merchant_payment_id
+            payment.save(
+                update_fields=[
+                    'status',
+                    'merchant_payment_id',
+                ]
+            )
 
         return subscription, payment
