@@ -15,10 +15,10 @@ from bot.keyboards.inline import get_inline_keyboard, get_invoice_keyboard
 from bot.loader import bot
 from bot.utils.bot import delete_message_or_pass
 from common.exceptions import PaymentAlreadyProcessed, PaymentExpired
-from services.infra.product_callback import (
-    ProductCallbackService,
+from services.infra.product_type import (
+    ProductTypeService,
 )
-from services.infra.ykassa_payload import YKASSAPayloadService
+from services.infra.ykassa_payload import PayloadService
 from services.business.payment import PaymentUseCase
 from web.apps.payments.models import MerchantType, Payment, PaymentStatus
 from web.apps.telegram_users.models import TelegramUser
@@ -58,10 +58,10 @@ async def send_ykassa_invoice(
     callback_data = callback.data.split('_')
     product_type_value, tariff_id = callback_data[-2:]
 
-    tariff_model = ProductCallbackService.get_tariff_model_by_product_type_value(
+    tariff_model = ProductTypeService.get_tariff_model_by_product_type_value(
         product_type_value
     )
-    product_type = ProductCallbackService.get_product_type_by_value(
+    product_type = ProductTypeService.get_product_type_by_value(
         product_type_value
     )
     if not tariff_model or not product_type:
@@ -114,7 +114,7 @@ async def process_pre_checkout_query(
         pre_checkout_query: types.PreCheckoutQuery,
 ):
     try:
-        invoice_payload_schema = YKASSAPayloadService.get_invoice_payload_schema(
+        invoice_payload_schema = PayloadService.get_invoice_payload_schema(
             pre_checkout_query.invoice_payload,
         )
     except (pydantic.ValidationError, JSONDecodeError):
@@ -125,7 +125,7 @@ async def process_pre_checkout_query(
         )
         return
 
-    tariff_model = ProductCallbackService.get_tariff_model_by_product_type_value(
+    tariff_model = ProductTypeService.get_tariff_model_by_product_type_value(
         invoice_payload_schema.product_type_value
     )
     tariff = await aget_or_none(
@@ -187,14 +187,14 @@ async def successful_payment(
         f'Обратитесь в поддержку {settings.SUPPORT_USERNAME}.'
     )
     try:
-        invoice_payload_schema = YKASSAPayloadService.get_invoice_payload_schema(
+        invoice_payload_schema = PayloadService.get_invoice_payload_schema(
             message.successful_payment.invoice_payload,
         )
     except (pydantic.ValidationError, JSONDecodeError):
         await message.answer(data_error_msg)
         return
 
-    product_type = ProductCallbackService.get_product_type_by_value(
+    product_type = ProductTypeService.get_product_type_by_value(
         invoice_payload_schema.product_type_value
     )
 
@@ -211,11 +211,12 @@ async def successful_payment(
         telegram_id=message.from_user.id,
     )
     try:
-        subscription, payment = await PaymentUseCase.process_subscription_payment(
+        subscription, payment = await PaymentUseCase.aexecute(
             telegram_user_id=telegram_user_id,
             payment_id=invoice_payload_schema.payment_id,
             tariff_id=invoice_payload_schema.tariff_id,
-            merchant_payment_id=message.successful_payment.provider_payment_charge_id
+            merchant_payment_id=message.successful_payment.provider_payment_charge_id,
+            product_type=product_type,
         )
     except Payment.DoesNotExist:
         await message.answer(data_error_msg)

@@ -2,8 +2,8 @@ import loguru
 from aiogram import Router, types, F, html
 
 from bot.keyboards.inline import get_inline_keyboard
-from services.infra.product_callback import (
-    ProductCallbackService,
+from services.infra.product_type import (
+    ProductTypeService,
 )
 from web.apps.consultations.models import ConsultationTariff
 from web.apps.face_rates.models import FaceRateTariff
@@ -16,7 +16,7 @@ router = Router()
 async def choice_product_type(
         message: types.Message,
 ):
-    product_type = ProductCallbackService.get_product_type_by_label(
+    product_type = ProductTypeService.get_product_type_by_label(
         message.text
     )
     if not product_type:
@@ -29,7 +29,7 @@ async def choice_product_type(
     if product_type != ProductType.PRIVATE_CHANNEL_ACCESS:
         return
 
-    tariff_model = ProductCallbackService.get_tariff_model_by_product_type_value(
+    tariff_model = ProductTypeService.get_tariff_model_by_product_type_value(
         product_type.value
     )
 

@@ -3,8 +3,8 @@ from aiogram import Router, types, F, html
 from django.core.exceptions import ObjectDoesNotExist
 
 from bot.keyboards.inline import get_inline_keyboard
-from services.infra.product_callback import (
-    ProductCallbackService,
+from services.infra.product_type import (
+    ProductTypeService,
     ProductType,
 )
 from bot.utils.texts import get_product_text
@@ -27,7 +27,7 @@ async def product_tariff_info_handler(
     callback_data = callback.data.split('_')
     product_type_value, tariff_id = callback_data
 
-    tariff_model = ProductCallbackService.get_tariff_model_by_product_type_value(
+    tariff_model = ProductTypeService.get_tariff_model_by_product_type_value(
         product_type_value
     )
 

@@ -27,7 +27,8 @@ INSTALLED_APPS = [
     
     # Библиотеки
     'django_extensions',
-    
+    'rest_framework',
+
     # Приложения
     'web.apps.telegram_users',
     'web.apps.subscriptions',

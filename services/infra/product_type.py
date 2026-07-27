@@ -9,7 +9,7 @@ from web.apps.subscriptions.models import PrivateChannelTariff
 
 
 
-class ProductCallbackService:
+class ProductTypeService:
     __product_type_model_map = {
         ProductType.FACE_RATE.value: FaceRateTariff,
         ProductType.CONSULTATION.value: ConsultationTariff,
