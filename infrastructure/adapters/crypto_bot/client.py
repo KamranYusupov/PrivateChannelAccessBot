@@ -21,7 +21,7 @@ class CryptoBotAPIClient:
         http_method: str,
         api_method: str,
         payload: Dict[str, Any],
-        timeout: int | Tuple[int, int] = (3, 10),
+        timeout: int = 10,
     ) -> Dict[str, Any]:
         headers = {'Crypto-Pay-API-Token': self.__api_token}
         request_kwargs = {
@@ -35,12 +35,10 @@ class CryptoBotAPIClient:
         elif http_method_upper in ('POST', 'PUT', 'PATCH', 'DELETE'):
             request_kwargs['json'] = payload
 
-        async with aiohttp.ClientSession(
-            base_url=self.base_url,
-        ) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.request(
                     http_method,
-                    api_method,
+                    f'{self.base_url}{api_method}',
                     **request_kwargs,
             ) as resp:
                 return await resp.json()
@@ -49,7 +47,7 @@ class CryptoBotAPIClient:
             self,
             api_method: str,
             params: Optional[Dict[str, Any]] = None,
-            timeout: int | Tuple[int, int] = (3, 10),
+            timeout: int = 10,
     ) -> Dict[str, Any]:
         params = params or {}
         return await self._request(
@@ -60,7 +58,7 @@ class CryptoBotAPIClient:
             self,
             api_method: str,
             payload: Dict[str, Any],
-            timeout: int | Tuple[int, int] = (3, 10),
+            timeout: int = 10,
     ) -> Dict[str, Any]:
         return await self._request(
             'POST', api_method, payload, timeout,
@@ -68,20 +66,48 @@ class CryptoBotAPIClient:
 
     async def create_invoice(
             self,
+            *,
             amount: Decimal,
-            description: str,
-            payload: str,
-            asset: str = 'USDT',
+            currency_type: str = 'crypto',
+            asset: Optional[str] = 'USDT',
+            fiat: Optional[str] = None,
+            accepted_assets: Optional[str] = None,
+            swap_to: Optional[str] = None,
+            description: Optional[str] = None,
+            hidden_message: Optional[str] = None,
+            paid_btn_name: Optional[str] = None,
+            paid_btn_url: Optional[str] = None,
+            payload: Optional[str] = None,
+            allow_comments: Optional[bool] = None,
+            allow_anonymous: Optional[bool] = None,
+            expires_in: Optional[int] = None,
     ) -> Dict[str, Any]:
-        method = 'createInvoice'
         request_data = {
-            'asset': asset,
+            'currency_type': currency_type,
             'amount': str(amount),
-            'description': description,
-            'payload': payload,
         }
+
+        optional_fields = {
+            'asset': asset,
+            'fiat': fiat,
+            'accepted_assets': accepted_assets,
+            'swap_to': swap_to,
+            'description': description,
+            'hidden_message': hidden_message,
+            'paid_btn_name': paid_btn_name,
+            'paid_btn_url': paid_btn_url,
+            'payload': payload,
+            'allow_comments': allow_comments,
+            'allow_anonymous': allow_anonymous,
+            'expires_in': expires_in,
+        }
+
+        request_data.update(
+            {k: v for k, v in optional_fields.items() if v is not None}
+        )
+
         return await self._request_post(
-            method,
+            'createInvoice',
             payload=request_data,
         )
 

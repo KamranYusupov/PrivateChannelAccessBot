@@ -15,8 +15,10 @@ from bot.keyboards.inline import get_inline_keyboard, get_invoice_keyboard
 from bot.loader import bot
 from bot.utils.bot import delete_message_or_pass
 from common.exceptions import PaymentAlreadyProcessed, PaymentExpired
-from services.infra.product_type import (
-    ProductTypeService,
+from infrastructure.adapters.crypto_bot.client import CryptoBotAPIClient
+from services.infra.choices.merchant_type import merchant_type_helper
+from services.infra.choices.product_type import (
+    product_type_helper,
 )
 from services.infra.ykassa_payload import PayloadService
 from services.business.payment import PaymentUseCase
@@ -49,22 +51,25 @@ async def buy_product_tariff(
     )
     return
 
-@router.callback_query(
-    F.data.startswith(f'{MerchantType.YKASSA.value}_buy')
-)
-async def send_ykassa_invoice(
+
+async def prepare_invoice_handler(
     callback: types.CallbackQuery,
+    expires_in: int,
 ):
     callback_data = callback.data.split('_')
+    merchant_type_value = callback_data[0]
     product_type_value, tariff_id = callback_data[-2:]
 
-    tariff_model = ProductTypeService.get_tariff_model_by_product_type_value(
+    merchant_type = merchant_type_helper.get_choice_by_value(
+        merchant_type_value,
+    )
+    tariff_model = product_type_helper.get_tariff_model_by_value(
         product_type_value
     )
-    product_type = ProductTypeService.get_product_type_by_value(
+    product_type = product_type_helper.get_choice_by_value(
         product_type_value
     )
-    if not tariff_model or not product_type:
+    if not tariff_model or not product_type or not merchant_type:
         await callback.message.delete()
         return
 
@@ -72,42 +77,106 @@ async def send_ykassa_invoice(
     await callback.message.delete()
 
     if not tariff:
-        loguru.logger.info(f'Tariff {tariff_id} not found.')
+        loguru.logger.error(f'Tariff {tariff_id} not found.')
+        await callback.message.delete()
         return
 
-    amount = int(tariff.price) * 100
     invoice_payload = {
         'product_type_value': product_type_value,
         'tariff_id': tariff_id,
     }
-
+    loguru.logger.debug(
+        f"{product_type} {merchant_type} {invoice_payload}"
+    )
     payment = await Payment.objects.acreate(
         amount=tariff.price,
         product_type=product_type,
-        merchant_type=MerchantType.YKASSA,
+        merchant_type=merchant_type,
         merchant_payload=invoice_payload,
         expires_at=(
-            timezone.now()
-            + timedelta(minutes=settings.YKASSA_PAYMENT_EXPIRES_IN_MINUTES)
+            timezone.now() + timedelta(minutes=expires_in)
         ),
     )
-    invoice_keyboard = get_invoice_keyboard(payment.id)
-    invoice_payload['payment_id'] = payment.id
+    return payment, tariff
 
+@router.callback_query(
+    F.data.startswith(f'{MerchantType.YKASSA.value}_buy')
+)
+async def send_ykassa_invoice(
+    callback: types.CallbackQuery,
+):
+    result = await prepare_invoice_handler(
+        callback=callback,
+        expires_in=settings.YKASSA_PAYMENT_EXPIRES_IN_MINUTES,
+    )
+    if not result:
+        return
+
+    payment, tariff = result
+
+    invoice_keyboard = get_invoice_keyboard(payment.id)
+    invoice_amount = payment.amount * 100
     invoice_message = await callback.message.answer_invoice(
         title=tariff.title,
         description=tariff.description,
-        payload=json.dumps(invoice_payload),
+        payload=json.dumps(payment.merchant_payload),
         provider_token=settings.YKASSA_TOKEN,
         reply_markup=invoice_keyboard,
         currency='RUB',
         test=True,
-        prices=[LabeledPrice(label=tariff.title, amount=amount)],
+        prices=[LabeledPrice(label=tariff.title, amount=invoice_amount)],
     )
     update_payment_invoice_message_id_task.delay(
         payment.id,
         invoice_message.message_id,
     )
+
+
+@router.callback_query(
+    F.data.startswith(f'{MerchantType.CRYPTO_BOT.value}_buy')
+)
+async def send_crypto_bot_invoice(
+        callback: types.CallbackQuery,
+):
+    result = await prepare_invoice_handler(
+        callback=callback,
+        expires_in=settings.CRYPTO_BOT_PAYMENT_EXPIRES_IN_MINUTES,
+    )
+    if not result:
+        return
+
+    await callback.answer('Создаю платеж . . .')
+
+    payment, tariff = result
+    crypto_bot_api_client = CryptoBotAPIClient()
+    response = await crypto_bot_api_client.create_invoice(
+        currency_type='fiat',
+        fiat='RUB',
+        amount=payment.amount,
+        accepted_assets='USDT',
+        expires_in=settings.CRYPTO_BOT_PAYMENT_EXPIRES_IN_MINUTES * 60,
+    )
+    if not response.get('ok'):
+        loguru.logger.error(response['error'])
+        await callback.message.edit_text(
+            'Произошла ошибка при создании платежа. Попробуйте позже.'
+        )
+        return
+
+    invoice_keyboard = get_invoice_keyboard(
+        payment.id,
+        invoice_url=response['result']['mini_app_invoice_url']
+    )
+    invoice_message = await callback.message.answer(
+        'Оплатите счет в приложении ⤵️',
+        reply_markup=invoice_keyboard
+    )
+
+    update_payment_invoice_message_id_task.delay(
+        payment.id,
+        invoice_message.message_id,
+    )
+
 
 @router.pre_checkout_query()
 async def process_pre_checkout_query(
@@ -125,7 +194,7 @@ async def process_pre_checkout_query(
         )
         return
 
-    tariff_model = ProductTypeService.get_tariff_model_by_product_type_value(
+    tariff_model = product_type_helper.get_tariff_model_by_value(
         invoice_payload_schema.product_type_value
     )
     tariff = await aget_or_none(
@@ -194,7 +263,7 @@ async def successful_payment(
         await message.answer(data_error_msg)
         return
 
-    product_type = ProductTypeService.get_product_type_by_value(
+    product_type = product_type_helper.get_choice_by_value(
         invoice_payload_schema.product_type_value
     )
 
@@ -237,7 +306,7 @@ async def successful_payment(
         )
         subscription.invite_link = limited_link_obj.invite_link
         await subscription.asave(
-            update_fields=["invite_link"]
+            update_fields=['invite_link']
         )
     except TelegramRetryAfter as e:
         await message.answer(

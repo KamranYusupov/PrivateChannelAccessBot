@@ -6,11 +6,10 @@ from rest_framework.response import Response
 
 from common.exceptions import PaymentAlreadyProcessed
 from services.business.payment import PaymentUseCase
-from services.infra.product_type import ProductTypeService
+from services.infra.choices.product_type import product_type_helper
 from web.api.v1.payments.crypto_bot.schemas import UpdateWebhookSchema, InvoiceStatus
-from web.apps.payments.models import Payment, PaymentStatus, MerchantType
+from web.apps.payments.models import Payment
 from web.apps.telegram_users.models import TelegramUser
-from web.db.orm_utils import aget_or_none
 
 
 @api_view(['POST'])
@@ -39,7 +38,7 @@ def update_webhook(request: Request):
     if invoice.status != InvoiceStatus.PAID:
         return Response(status=status.HTTP_200_OK)
 
-    product_type = ProductTypeService.get_product_type_by_value(
+    product_type = product_type_helper.get_choice_by_value(
         invoice.payload.product_type_value
     )
     if not product_type:
