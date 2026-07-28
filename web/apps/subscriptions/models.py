@@ -2,6 +2,7 @@ from typing import Optional
 
 from asgiref.sync import sync_to_async
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from web.db.model_mixins import TimestampMixin, AbstractTariff
@@ -43,6 +44,31 @@ class Subscription(models.Model):
         null=True,
         blank=True,
     )
+
+    class Manager(models.Manager):
+
+        def has_active_subscription(
+                self,
+                telegram_user_id: int,
+        ) -> bool:
+            return (
+                Subscription.objects
+                .filter(
+                    telegram_user_id=telegram_user_id,
+                    is_active=True,
+                    expires_at__gte=timezone.now(),
+                )
+                .exists()
+            )
+
+        @sync_to_async
+        def ahas_active_subscription(
+                self,
+                telegram_user_id: int,
+        ) -> bool:
+            return self.has_active_subscription(telegram_user_id)
+
+    objects = Manager()
 
     class Meta:
         verbose_name = _('Подписка')
