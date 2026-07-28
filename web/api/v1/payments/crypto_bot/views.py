@@ -1,10 +1,15 @@
+import pprint
+
+import loguru
 from aiogram.types import Invoice
 from django.conf import settings
 from django.db import transaction
+from pydantic import ValidationError
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from common.exceptions import PaymentAlreadyProcessed
 from services.business import payment
@@ -23,13 +28,17 @@ from web.apps.telegram_users.tasks.infra import delete_message_task
 @authentication_classes([])
 @permission_classes([])
 def update_webhook(request: Request):
-    serializer = UpdateWebhookSchema.drf_serializer(
-        data=request.data
-    )
-    serializer.is_valid(raise_exception=True)
+    try:
+        schema = UpdateWebhookSchema.model_validate(request.data)
+    except ValidationError as e:
+        from pprint import pprint
 
-    schema: UpdateWebhookSchema = UpdateWebhookSchema(**serializer.data)
+        pprint(e.errors())
+
+        raise DRFValidationError(e.errors())
+
     invoice = schema.payload
+    loguru.logger.debug(str(invoice.payload.telegram_id))
 
     telegram_user = (
         TelegramUser.objects
@@ -62,6 +71,7 @@ def update_webhook(request: Request):
                 tariff_id=invoice.payload.tariff_id,
                 merchant_payment_id=str(invoice.invoice_id),
                 product_type=product_type,
+                merchant_payload=request.data,
             )
             delete_message_task.delay(
                 chat_id=invoice.payload.telegram_id,

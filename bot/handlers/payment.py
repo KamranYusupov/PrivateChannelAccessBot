@@ -1,6 +1,7 @@
 import json
 from datetime import timedelta
 from json import JSONDecodeError
+from typing import Tuple, Dict, Union
 
 import loguru
 from aiogram import Router, types, F
@@ -29,6 +30,7 @@ from web.apps.subscriptions.tasks.business.invite_link import (
     create_and_send_invite_link_task,
 )
 from web.apps.payments.tasks import update_payment_invoice_message_id_task
+from common.typing import TariffModelT
 
 router = Router()
 
@@ -55,7 +57,7 @@ async def buy_product_tariff(
 async def prepare_invoice_handler(
     callback: types.CallbackQuery,
     expires_in: int,
-):
+) -> Tuple[Dict, Payment, TariffModelT] | None:
     callback_data = callback.data.split('_')
     merchant_type_value = callback_data[0]
     product_type_value, tariff_id = callback_data[-2:]
@@ -81,23 +83,23 @@ async def prepare_invoice_handler(
         await callback.message.delete()
         return
 
-    invoice_payload = {
-        'product_type_value': product_type_value,
-        'tariff_id': tariff_id,
-    }
-    loguru.logger.debug(
-        f"{product_type} {merchant_type} {invoice_payload}"
-    )
+
     payment = await Payment.objects.acreate(
         amount=tariff.price,
         product_type=product_type,
         merchant_type=merchant_type,
-        merchant_payload=invoice_payload,
         expires_at=(
             timezone.now() + timedelta(minutes=expires_in)
         ),
     )
-    return payment, tariff
+    invoice_payload = {
+        'product_type_value': product_type_value,
+        'tariff_id': tariff_id,
+        'payment_id': payment.id,
+        'telegram_id': callback.from_user.id,
+    }
+    return invoice_payload, payment, tariff
+
 
 @router.callback_query(
     F.data.startswith(f'{MerchantType.YKASSA.value}_buy')
@@ -112,14 +114,14 @@ async def send_ykassa_invoice(
     if not result:
         return
 
-    payment, tariff = result
+    invoice_payload, payment, tariff = result
 
     invoice_keyboard = get_invoice_keyboard(payment.id)
     invoice_amount = payment.amount * 100
     invoice_message = await callback.message.answer_invoice(
         title=tariff.title,
         description=tariff.description,
-        payload=json.dumps(payment.merchant_payload),
+        payload=json.dumps(invoice_payload),
         provider_token=settings.YKASSA_TOKEN,
         reply_markup=invoice_keyboard,
         currency='RUB',
@@ -147,7 +149,8 @@ async def send_crypto_bot_invoice(
 
     await callback.answer('Создаю платеж . . .')
 
-    payment, tariff = result
+    invoice_payload, payment, tariff = result
+
     crypto_bot_api_client = CryptoBotAPIClient()
     response = await crypto_bot_api_client.create_invoice(
         currency_type='fiat',
@@ -155,10 +158,11 @@ async def send_crypto_bot_invoice(
         amount=payment.amount,
         accepted_assets='USDT',
         expires_in=settings.CRYPTO_BOT_PAYMENT_EXPIRES_IN_MINUTES * 60,
+        payload=json.dumps(invoice_payload),
     )
     if not response.get('ok'):
         loguru.logger.error(response['error'])
-        await callback.message.edit_text(
+        await callback.message.answer(
             'Произошла ошибка при создании платежа. Попробуйте позже.'
         )
         return
@@ -286,6 +290,7 @@ async def successful_payment(
             tariff_id=invoice_payload_schema.tariff_id,
             merchant_payment_id=message.successful_payment.provider_payment_charge_id,
             product_type=product_type,
+            merchant_payload=message.successful_payment.invoice_payload
         )
     except Payment.DoesNotExist:
         await message.answer(data_error_msg)

@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional, Dict, Any
 
 from asgiref.sync import sync_to_async
 from django.db import transaction
@@ -29,12 +29,14 @@ class PaymentUseCase:
             tariff_id: int,
             merchant_payment_id: str,
             product_type: ProductType,
+            merchant_payload: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Product, Payment]:
         process_payment_method_kwargs = dict(
             telegram_user_id=telegram_user_id,
             payment_id=payment_id,
             tariff_id=tariff_id,
             merchant_payment_id=merchant_payment_id,
+            merchant_payload=merchant_payload
         )
         match product_type:
             case ProductType.PRIVATE_CHANNEL_ACCESS:
@@ -56,13 +58,15 @@ class PaymentUseCase:
             tariff_id: int,
             merchant_payment_id: str,
             product_type: ProductType,
+            merchant_payload: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Product, Payment]:
         return cls.execute(
             telegram_user_id=telegram_user_id,
             payment_id=payment_id,
             tariff_id=tariff_id,
             merchant_payment_id=merchant_payment_id,
-            product_type=product_type
+            product_type=product_type,
+            merchant_payload=merchant_payload
         )
 
     @classmethod
@@ -73,6 +77,7 @@ class PaymentUseCase:
             payment_id: int,
             tariff_id: int,
             merchant_payment_id: str,
+            merchant_payload: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Subscription, Payment]:
         term_days = (
             PrivateChannelTariff.objects
@@ -96,10 +101,12 @@ class PaymentUseCase:
             )
             payment.status = PaymentStatus.SUCCESS
             payment.merchant_payment_id = merchant_payment_id
+            payment.merchant_payload = merchant_payload
             payment.save(
                 update_fields=[
                     'status',
                     'merchant_payment_id',
+                    'merchant_payload',
                 ]
             )
 
