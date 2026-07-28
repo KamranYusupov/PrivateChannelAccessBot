@@ -1,7 +1,9 @@
 from typing import Optional
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async, async_to_sync
 from django.db import models
+from django.db.models.aggregates import Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -51,22 +53,40 @@ class Subscription(models.Model):
                 self,
                 telegram_user_id: int,
         ) -> bool:
-            return (
-                Subscription.objects
+            return async_to_sync(
+                self.ahas_active_subscription
+            )(telegram_user_id)
+
+        async def ahas_active_subscription(
+                self,
+                telegram_user_id: int,
+        ) -> bool:
+            return await (
+                self
                 .filter(
                     telegram_user_id=telegram_user_id,
                     is_active=True,
                     expires_at__gte=timezone.now(),
                 )
-                .exists()
+                .aexists()
             )
 
-        @sync_to_async
-        def ahas_active_subscription(
-                self,
-                telegram_user_id: int,
-        ) -> bool:
-            return self.has_active_subscription(telegram_user_id)
+        async def aget_expires_in_days(self, telegram_user_id: int) -> int:
+            result = await (
+                self.select_related('tariff')
+                .only('tariff__term_days')
+                .filter(
+                    telegram_user_id=telegram_user_id,
+                    expires_at__gte=timezone.now(),
+                ).aaggregate(
+                    expires_in_days=Coalesce(Sum('tariff__term_days'), 0),
+                )
+            )
+            return result['expires_in_days']
+
+        def get_expires_in_days(self, telegram_user_id: int) -> int:
+            return async_to_sync(self.aget_expires_in_days)(telegram_user_id)
+
 
     objects = Manager()
 

@@ -8,6 +8,8 @@ from aiogram.types import (
 )
 from django.utils import timezone
 
+from web.apps.payments.models import ProductType
+
 
 def get_reply_keyboard(
     buttons: Sequence[str],
@@ -20,3 +22,9 @@ def get_reply_keyboard(
         resize_keyboard=resize_keyboard
     )
 
+
+def get_base_reply_keyboard() -> ReplyKeyboardMarkup:
+    buttons = ('📱 Моя подписка', )
+    buttons += tuple(label for label in ProductType.labels)
+
+    return get_reply_keyboard(buttons)

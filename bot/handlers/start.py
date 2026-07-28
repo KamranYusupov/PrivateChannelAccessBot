@@ -1,9 +1,8 @@
 ﻿from aiogram import Router, types
 from aiogram.filters import CommandStart
 
-from bot.keyboards.reply import get_reply_keyboard
+from bot.keyboards.reply import get_base_reply_keyboard
 from bot.schemas.telegram_user import TelegramUserCreateSchema
-from web.apps.payments.models import ProductType
 from web.apps.telegram_users.models import TelegramUser
 
 router = Router()
@@ -27,11 +26,10 @@ async def start_command_handler(
         )
         await current_user.asave()
 
-    buttons = (label for label in ProductType.labels)
     await message.answer(
         f'Привет, {message.from_user.first_name} 👋. '
         'Выбери раздел: ',
-        reply_markup=get_reply_keyboard(buttons=buttons)
+        reply_markup=get_base_reply_keyboard(),
     )
 
 

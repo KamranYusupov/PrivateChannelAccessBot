@@ -23,7 +23,7 @@ from services.infra.choices.product_type import (
 )
 from services.infra.ykassa_payload import PayloadService
 from services.business.payment import PaymentUseCase
-from web.apps.payments.models import MerchantType, Payment, PaymentStatus
+from web.apps.payments.models import MerchantType, Payment, PaymentStatus, ProductType
 from web.apps.telegram_users.models import TelegramUser
 from web.db.orm_utils import aget_or_none
 from web.apps.payments.tasks import update_payment_invoice_message_id_task
@@ -144,7 +144,9 @@ async def send_crypto_bot_invoice(
     if not result:
         return
 
-    await callback.answer('Создаю платеж . . .')
+    loading_message = await callback.message.answer(
+        'Создаю платеж . . .'
+    )
 
     invoice_payload, payment, tariff = result
 
@@ -152,13 +154,17 @@ async def send_crypto_bot_invoice(
     response = await crypto_bot_api_client.create_invoice(
         currency_type='fiat',
         fiat='RUB',
-        amount=payment.amount,
+        amount=1, #payment.amount,
         accepted_assets='USDT',
         expires_in=settings.CRYPTO_BOT_PAYMENT_EXPIRES_IN_MINUTES * 60,
         payload=json.dumps(invoice_payload),
     )
     if not response.get('ok'):
         loguru.logger.error(response['error'])
+        await callback.bot.delete_message(
+            chat_id=callback.from_user.id,
+            message_id=loading_message.message_id,
+        )
         await callback.message.answer(
             'Произошла ошибка при создании платежа. Попробуйте позже.'
         )
@@ -167,6 +173,10 @@ async def send_crypto_bot_invoice(
     invoice_keyboard = get_invoice_keyboard(
         payment.id,
         invoice_url=response['result']['mini_app_invoice_url']
+    )
+    await callback.bot.delete_message(
+        chat_id=callback.from_user.id,
+        message_id=loading_message.message_id,
     )
     invoice_message = await callback.message.answer(
         'Оплатите счет в приложении ⤵️',
@@ -325,16 +335,29 @@ async def cancel_payment_handler(
 
     await callback.message.delete()
 
+    reply_markup = get_inline_keyboard(
+        buttons={
+            '💰 Посмотреть тарифы': \
+                ProductType.PRIVATE_CHANNEL_ACCESS.label
+        }
+    )
+
     if updated > 0:
         await callback.message.answer(
             'Платеж успешно закрыт ✅',
-            reply_markup=None,
+            reply_markup=reply_markup,
         )
         return
 
     payment = await aget_or_none(Payment.objects.all(), id=payment_id)
 
     if payment and payment.status == PaymentStatus.SUCCESS:
-        await callback.message.answer('Чек уже оплачен ✅', reply_markup=None)
+        await callback.message.answer(
+            'Чек уже оплачен ✅',
+            reply_markup=reply_markup,
+        )
     else:
-        await callback.message.answer('Чек уже недействителен.', reply_markup=None)
+        await callback.message.answer(
+            'Чек уже недействителен.',
+            reply_markup=reply_markup,
+        )
