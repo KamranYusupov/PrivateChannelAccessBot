@@ -18,9 +18,7 @@ from services.infra.choices.product_type import product_type_helper
 from web.api.v1.payments.crypto_bot.schemas import UpdateWebhookSchema, InvoiceStatus
 from web.apps.payments.models import Payment
 from web.apps.telegram_users.models import TelegramUser
-from web.apps.subscriptions.tasks.business import (
-    create_and_send_invite_link_task,
-)
+from web.apps.telegram_users.tasks import send_message_task
 from web.apps.telegram_users.tasks.infra import delete_message_task
 
 
@@ -38,7 +36,6 @@ def update_webhook(request: Request):
         raise DRFValidationError(e.errors())
 
     invoice = schema.payload
-    loguru.logger.debug(str(invoice.payload.telegram_id))
 
     telegram_user = (
         TelegramUser.objects
@@ -77,11 +74,17 @@ def update_webhook(request: Request):
                 chat_id=invoice.payload.telegram_id,
                 message_id=payment.invoice_message_id
             )
-            create_and_send_invite_link_task.delay(
-                user_chat_id=invoice.payload.telegram_id,
-                link_chat_id=settings.PRIVATE_CHANNEL_ID,
-                subscription_id=subscription.id,
-                member_limit=1,
+            channel_link_button = {
+                'text': '🚀 Вступить в приватный канал',
+                'url': settings.PRIVATE_CHANNEL_LINK,
+            }
+            inline_keyboard = [
+                [channel_link_button],
+            ]
+            send_message_task.delay(
+                chat_id=invoice.payload.telegram_id,
+                text='🎉 Оплата прошла успешно!',
+                reply_markup={'inline_keyboard': inline_keyboard},
             )
         return Response(status=status.HTTP_201_CREATED)
     except Payment.DoesNotExist:

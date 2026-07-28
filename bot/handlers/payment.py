@@ -26,9 +26,6 @@ from services.business.payment import PaymentUseCase
 from web.apps.payments.models import MerchantType, Payment, PaymentStatus
 from web.apps.telegram_users.models import TelegramUser
 from web.db.orm_utils import aget_or_none
-from web.apps.subscriptions.tasks.business.invite_link import (
-    create_and_send_invite_link_task,
-)
 from web.apps.payments.tasks import update_payment_invoice_message_id_task
 from common.typing import TariffModelT
 
@@ -155,7 +152,7 @@ async def send_crypto_bot_invoice(
     response = await crypto_bot_api_client.create_invoice(
         currency_type='fiat',
         fiat='RUB',
-        amount=payment.amount,
+        amount=1 ,#payment.amount,
         accepted_assets='USDT',
         expires_in=settings.CRYPTO_BOT_PAYMENT_EXPIRES_IN_MINUTES * 60,
         payload=json.dumps(invoice_payload),
@@ -304,44 +301,14 @@ async def successful_payment(
         message_id=payment.invoice_message_id,
     )
 
-    try:
-        limited_link_obj = await message.bot.create_chat_invite_link(
-            chat_id=settings.PRIVATE_CHANNEL_ID,
-            member_limit=1,
-        )
-        subscription.invite_link = limited_link_obj.invite_link
-        await subscription.asave(
-            update_fields=['invite_link']
-        )
-    except TelegramRetryAfter as e:
-        await message.answer(
-            '🎉 Оплата прошла успешно!',
-        )
-        await message.answer(
-            'Уткнулись в лимиты Telegram! '
-            'Отправим ссылку для вступления чуть позже.'
-        )
-        create_and_send_invite_link_task.apply_async(
-            countdown=e.retry_after,
-            kwargs=dict(
-                user_chat_id=message.from_user.id,
-                link_chat_id=settings.PRIVATE_CHANNEL_ID,
-                subscription_id=subscription.id,
-                member_limit=1,
-            )
-        )
-        return
 
     builder = InlineKeyboardBuilder()
     builder.button(
         text='🚀 Вступить в приватный канал',
-        url=limited_link_obj.invite_link
+        url=settings.PRIVATE_CHANNEL_LINK
     )
-
     await message.answer(
-        text='🎉 Оплата прошла успешно!\n\n'
-             'Вот твоя индивидуальная ссылка для входа. '
-             f'Она сработает <b>только один раз</b> так что никуда её не пересылай.',
+        text='🎉 Оплата прошла успешно!\n\n',
         reply_markup=builder.as_markup()
     )
 

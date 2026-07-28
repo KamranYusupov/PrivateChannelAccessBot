@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 from celery import shared_task, Task
 from django.conf import settings
 
@@ -12,13 +14,14 @@ def send_message_task(
         self: Task,
         chat_id: int,
         text: int,
+        reply_markup: Dict[str, List[Dict[str, str]]] | None = None,
 ) -> None:
     telegram_bot_client = TelegramBotSyncClient(settings.BOT_TOKEN)
     execute_with_telegram_retry(
         self,
-        task_args=(chat_id, text),
+        task_args=(chat_id, text, reply_markup),
         telegram_bot_method=telegram_bot_client.send_message,
-        telegram_bot_method_args=(chat_id, text),
+        telegram_bot_method_args=(chat_id, text, reply_markup),
     )
 
 @shared_task(bind=True)

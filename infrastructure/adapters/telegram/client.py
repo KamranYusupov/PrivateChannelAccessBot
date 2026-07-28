@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, NoReturn
+from typing import Any, Dict, Tuple, NoReturn, List
 
 import requests
 from django.conf import settings
@@ -97,12 +97,15 @@ class TelegramBotSyncClient:
         self,
         chat_id: int,
         text: str,
+        reply_markup: Dict[str, List[Dict[str, str]]] | None = None,
     ) -> Dict[str, Any]:
+
         result = self._request_post(
             'sendMessage',
             payload={
                 'chat_id': chat_id,
                 'text': text,
+                'reply_markup': reply_markup,
                 'parse_mode': 'HTML',
             },
         )
