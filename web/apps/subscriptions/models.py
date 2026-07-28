@@ -78,6 +78,7 @@ class Subscription(models.Model):
                 .filter(
                     telegram_user_id=telegram_user_id,
                     expires_at__gte=timezone.now(),
+                    is_active=True,
                 ).aaggregate(
                     expires_in_days=Coalesce(Sum('tariff__term_days'), 0),
                 )
