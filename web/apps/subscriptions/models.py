@@ -1,3 +1,4 @@
+from datetime import timedelta, datetime
 from typing import Optional
 
 from asgiref.sync import sync_to_async, async_to_sync
@@ -97,6 +98,21 @@ class Subscription(models.Model):
                 .filter(
                     is_active=True,
                     expires_at__lt=timezone.now())
+            )
+
+        def get_expires_tomorrow_telegram_ids(self) -> QuerySet:
+            tomorrow = timezone.now() + timedelta(days=1)
+            start_of_tomorrow = datetime.combine(tomorrow, datetime.min.time())
+            end_of_tomorrow = datetime.combine(tomorrow, datetime.max.time())
+
+            return (
+                self
+                .filter(
+                    is_active=True,
+                    expires_at__gte=start_of_tomorrow,
+                    expires_at__lte=end_of_tomorrow,
+                )
+                .values_list('telegram_user__telegram_id', flat=True)
             )
 
     objects = Manager()
