@@ -4,6 +4,7 @@ from asgiref.sync import sync_to_async, async_to_sync
 from django.db import models
 from django.db.models.aggregates import Sum
 from django.db.models.functions import Coalesce
+from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -88,6 +89,15 @@ class Subscription(models.Model):
         def get_expires_in_days(self, telegram_user_id: int) -> int:
             return async_to_sync(self.aget_expires_in_days)(telegram_user_id)
 
+        def get_expired_and_active(self) -> QuerySet:
+            return (
+                self
+                .select_related('telegram_user')
+                .only('id', 'telegram_user__telegram_id')
+                .filter(
+                    is_active=True,
+                    expires_at__lt=timezone.now())
+            )
 
     objects = Manager()
 

@@ -126,3 +126,23 @@ class TelegramBotSyncClient:
         )
 
         return result
+
+    def ban_chat_member(
+        self,
+        chat_id: int,
+        user_id: int,
+        until_date: int | None = None,
+        revoke_messages: bool = False,
+    ) -> Dict[str, Any]:
+
+        result = self._request_post(
+            'banChatMember',
+            payload={
+                'chat_id': chat_id,
+                'user_id': user_id,
+                'until_date': until_date,
+                'revoke_messages': revoke_messages,
+            },
+        )
+
+        return result
