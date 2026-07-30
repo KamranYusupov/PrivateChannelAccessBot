@@ -115,6 +115,15 @@ def kick_telegram_user_from_channel(
                 'until_date': until_date
             }
         )
+
+    except (TelegramBadRequest, TelegramForbidden) as e:
+        loguru.logger.debug(f'Ban ignored for {telegram_id}: {e}')
+        kick_success = True
+
+    except TelegramAPIError as e:
+        loguru.logger.error(f'API Error during ban for {telegram_id}: {e}')
+
+    try:
         execute_with_telegram_retry(
             task=self,
             telegram_bot_method=telegram_client.unban_chat_member,
@@ -127,21 +136,10 @@ def kick_telegram_user_from_channel(
 
         kick_success = True
     except (TelegramBadRequest, TelegramForbidden) as e:
-        loguru.logger.info(
-            default_exc_msg.format(
-                telegram_id=telegram_id,
-                error=e,
-            )
-        )
+        loguru.logger.debug(f'Unban ignored for {telegram_id}: {e}')
         kick_success = True
-
     except TelegramAPIError as e:
-        loguru.logger.info(
-            default_exc_msg.format(
-                telegram_id=telegram_id,
-                error=e,
-            )
-        )
+        loguru.logger.error(f'API Error during unban for {telegram_id}: {e}')
 
     if kick_success:
         TelegramUser.objects.filter(
