@@ -45,7 +45,7 @@ async def product_tariff_info_handler(
         message_text,
         reply_markup=get_inline_keyboard(
             buttons={
-                'Преобрести 💸': f'buy_{product_type_value}_{tariff_id}',
+                'Приобрести 💸': f'buy_{product_type_value}_{tariff_id}',
             },
         )
     )
