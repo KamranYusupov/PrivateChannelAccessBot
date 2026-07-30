@@ -11,6 +11,7 @@ from web.apps.consultations.models import Consultation
 from web.apps.face_rates.models import FaceRate
 from web.apps.payments.models import PaymentStatus, Payment, ProductType
 from web.apps.subscriptions.models import Subscription, PrivateChannelTariff
+from web.apps.telegram_users.models import TelegramUser
 
 Product = Union[
     Subscription,
@@ -109,5 +110,9 @@ class PaymentUseCase:
                     'merchant_payload',
                 ]
             )
+            TelegramUser.objects.filter(
+                id=telegram_user_id,
+                has_channel_access=False
+            ).update(has_channel_access=True)
 
         return subscription, payment
