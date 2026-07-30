@@ -22,6 +22,10 @@ class TelegramUser(
         blank=True,
         default=None,
     )
+    has_channel_access = models.BooleanField(
+        default=False,
+        db_index=True,
+    )
 
     class Meta:
         verbose_name = _("Пользователь")
