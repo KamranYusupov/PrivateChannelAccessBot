@@ -12,7 +12,8 @@ router = Router()
 @router.chat_join_request()
 async def face_control_handler(join_request: ChatJoinRequest):
     current_user = await aget_or_none(
-        TelegramUser.objects.only('id').all(),
+        TelegramUser.objects
+        .only('id', 'has_channel_access').all(),
         telegram_id=join_request.from_user.id
     )
     if not current_user:
@@ -39,6 +40,6 @@ async def face_control_handler(join_request: ChatJoinRequest):
 
     if not current_user.has_channel_access:
         current_user.has_channel_access = True
-        await current_user.asave(update_fields=['has_active_subscription'])
+        await current_user.asave(update_fields=['has_channel_access'])
 
     await join_request.approve()
