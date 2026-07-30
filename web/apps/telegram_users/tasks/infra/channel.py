@@ -1,10 +1,13 @@
-from celery import shared_task
+from celery import shared_task, Task
 
 from infrastructure.adapters.telegram.client import TelegramBotSyncClient
+from web.core.redis_init import telegram_api_task_rate_limit
 
 
-@shared_task
+@shared_task(bind=True, max_retries=5)
+@telegram_api_task_rate_limit()
 def ban_chat_member_task(
+        self: Task,
         user_id: int,
         chat_id: int,
         until_date: int | None = None,

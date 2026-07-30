@@ -6,10 +6,12 @@ from django.conf import settings
 from infrastructure.adapters.telegram.client import TelegramBotSyncClient
 from infrastructure.adapters.telegram.exceptions import TelegramAPIError, TelegramRetryAfter
 from web.apps.subscriptions.models import Subscription
-from web.utils.celery_tasks import execute_with_telegram_retry
+from utils.celery_tasks import execute_with_telegram_retry
+from web.core.redis_init import telegram_api_task_rate_limit
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, max_retries=5)
+@telegram_api_task_rate_limit()
 def send_message_task(
         self: Task,
         chat_id: int,
@@ -19,7 +21,6 @@ def send_message_task(
     telegram_bot_client = TelegramBotSyncClient(settings.BOT_TOKEN)
     execute_with_telegram_retry(
         self,
-        task_args=(chat_id, text, reply_markup),
         telegram_bot_method=telegram_bot_client.send_message,
         telegram_bot_method_args=(chat_id, text, reply_markup),
     )
@@ -33,7 +34,6 @@ def delete_message_task(
     telegram_bot_client = TelegramBotSyncClient(settings.BOT_TOKEN)
     execute_with_telegram_retry(
         self,
-        task_args=(chat_id, message_id),
         telegram_bot_method=telegram_bot_client.delete_message,
         telegram_bot_method_args=(chat_id, message_id),
     )

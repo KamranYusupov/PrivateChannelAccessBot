@@ -15,4 +15,4 @@ class TelegramUserSchema(TelegramUserBaseSchema):
     
 
 class TelegramUserCreateSchema(TelegramUserBaseSchema):
-    telegram_id: int = Field(alias="id")
+    telegram_id: int = Field(alias='id')

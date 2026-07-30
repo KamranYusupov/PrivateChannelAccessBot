@@ -1,14 +1,17 @@
 from datetime import timedelta, datetime
-from typing import Optional
+from typing import Optional, List, Set, Type
 
 from asgiref.sync import sync_to_async, async_to_sync
 from django.db import models
+from django.db.models import OuterRef, Exists
 from django.db.models.aggregates import Sum
 from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.apps import apps
 
+from common.typing import ModelT
 from web.db.model_mixins import TimestampMixin, AbstractTariff
 
 
@@ -24,7 +27,7 @@ class Subscription(models.Model):
         'telegram_users.TelegramUser',
         on_delete=models.SET_NULL,
         null=True,
-        related_name='subscription',
+        related_name='subscriptions',
         verbose_name=_('Пользователь Telegram'),
     )
     payment = models.OneToOneField(
@@ -48,6 +51,9 @@ class Subscription(models.Model):
         null=True,
         blank=True,
     )
+
+    def get_telegram_user_model(self) -> Optional[Type[ModelT]]:
+        return apps.get_model('telegram_users', 'TelegramUser')
 
     class Manager(models.Manager):
 
@@ -90,36 +96,46 @@ class Subscription(models.Model):
         def get_expires_in_days(self, telegram_user_id: int) -> int:
             return async_to_sync(self.aget_expires_in_days)(telegram_user_id)
 
-        def get_expired_and_active(self) -> QuerySet:
+        def get_expired_and_active(self, now: datetime = timezone.now()) -> QuerySet:
             return (
                 self
                 .select_related('telegram_user')
                 .only('id', 'telegram_user__telegram_id')
                 .filter(
                     is_active=True,
-                    expires_at__lt=timezone.now())
+                    expires_at__lt=now,
+                )
             )
 
-        def get_expires_tomorrow_telegram_ids(self) -> QuerySet:
+        def get_expires_tomorrow_subscription(
+                self,
+                telegram_user_id: int,
+        ) -> bool:
             tomorrow = timezone.now() + timedelta(days=1)
             start_of_tomorrow = datetime.combine(tomorrow, datetime.min.time())
             end_of_tomorrow = datetime.combine(tomorrow, datetime.max.time())
 
-            return (
-                self
-                .filter(
-                    is_active=True,
-                    expires_at__gte=start_of_tomorrow,
-                    expires_at__lte=end_of_tomorrow,
-                )
-                .values_list('telegram_user__telegram_id', flat=True)
-            )
+            expires_tomorrow_subscription_exists = self.filter(
+                telegram_user_id=telegram_user_id,
+                is_active=True,
+                expires_at__gte=start_of_tomorrow,
+                expires_at__lte=end_of_tomorrow,
+            ).exists()
+            has_active_subscriptions_after_tomorrow = self.filter(
+                telegram_user_id=telegram_user_id,
+                expires_at__gte=end_of_tomorrow,
+            ).exists()
+            return expires_tomorrow_subscription_exists and not has_active_subscriptions_after_tomorrow
+
 
     objects = Manager()
 
     class Meta:
         verbose_name = _('Подписка')
         verbose_name_plural = _('Подписки')
+        indexes = [
+            models.Index(fields=['telegram_user', 'is_active']),
+        ]
 
     def __str__(self):
         return f'Подписка для {self.telegram_user.username or self.telegram_user.telegram_id}'

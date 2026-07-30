@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 from typing import List
 
 import loguru
@@ -6,86 +7,121 @@ from aiogram.types import InlineKeyboardMarkup
 from celery import shared_task, Task
 from celery_once import QueueOnce
 from django.conf import settings
+from django.db.models.query import QuerySet
+from django.utils import timezone
 
 from infrastructure.adapters.telegram.client import TelegramBotSyncClient
 from infrastructure.adapters.telegram.exceptions import (
     TelegramAPIError,
     TelegramBadRequest, TelegramRetryAfter, TelegramForbidden,
 )
+from utils.celery_tasks import execute_with_telegram_retry
+from utils.orm import update_by_batches
 from web.apps.payments.models import ProductType
 from web.apps.subscriptions.models import Subscription
+from web.apps.telegram_users.models import TelegramUser
 from web.apps.telegram_users.tasks import send_message_task
-from web.utils.celery_tasks import execute_with_telegram_retry
+from web.core.redis_init import telegram_api_task_rate_limit
+
+
+@shared_task(
+    bind=True,
+    base=QueueOnce,
+    once={'keys': [], 'unlock_before_retry': True}
+)
+def deactivate_subscriptions_task(
+        self: Task,
+        batch_size: int = 500
+) -> int:
+    return update_by_batches(
+        manager=Subscription.objects,
+        filters=dict(
+            is_active=True,
+            expires_at__lt=timezone.now()
+        ),
+        update_kwargs={'is_active': False},
+        batch_size=batch_size,
+    )
+
+
+@shared_task(
+    base=QueueOnce,
+    once={'keys': [], 'unlock_before_retry': True}
+)
+def mass_kick_telegram_users_from_channel_with_inactive_subscription_task():
+    telegram_users_with_inactive_subscription = (
+        TelegramUser.objects
+        .get_telegram_users_with_inactive_subscription()
+    )
+
+    for telegram_user in telegram_users_with_inactive_subscription:
+        kick_telegram_user_from_channel.delay(
+            telegram_user.id,
+            telegram_user.telegram_id
+        )
 
 
 @shared_task(
     bind=True,
     max_retries=5,
     base=QueueOnce,
-    once={'keys': [], 'unlock_before_retry': True}
+    once={'keys': ['telegram_id'], 'unlock_before_retry': False}
 )
-def set_subscriptions_inactive_and_kick_users_task(
+@telegram_api_task_rate_limit()
+def kick_telegram_user_from_channel(
         self: Task,
-        batch_size: int = 20
-):
-    expired_subscriptions = Subscription.objects.get_expired_and_active()
+        telegram_user_id: int,
+        telegram_id: int,
+) -> None:
+    has_active_subscription = Subscription.objects.filter(
+        telegram_user_id=telegram_user_id,
+        is_active=True,
+        expires_at__gte=timezone.now(),
+    ).exists()
+
+    if has_active_subscription:
+        return
+
     telegram_client = TelegramBotSyncClient()
     default_exc_msg = (
         'Error while kicking {telegram_id}: "{error}"'
     )
+    until_date = int(time.time()) + 60
+    kick_success = False
 
-    kicked_subs_ids = []
-    for subscription in expired_subscriptions:
-        until_date = int(time.time()) + 60
-        telegram_id = subscription.telegram_user.telegram_id
-        try:
-            telegram_client.ban_chat_member(
-                user_id=telegram_id,
-                chat_id=settings.PRIVATE_CHANNEL_ID,
-                until_date=until_date
+    try:
+        execute_with_telegram_retry(
+            task=self,
+            telegram_bot_method=telegram_client.ban_chat_member,
+            telegram_bot_method_kwargs={
+                'user_id': telegram_id,
+                'chat_id': settings.PRIVATE_CHANNEL_ID,
+                'until_date': until_date
+            }
+        )
+        kick_success = True
+
+    except (TelegramBadRequest, TelegramForbidden) as e:
+        loguru.logger.info(
+            default_exc_msg.format(
+                telegram_id=telegram_id,
+                error=e,
             )
-            kicked_subs_ids.append(subscription.id)
-        except (TelegramBadRequest, TelegramForbidden) as e:
-            kicked_subs_ids.append(subscription.id)
-            loguru.logger.info(
-                default_exc_msg.format(
-                    telegram_id=telegram_id,
-                    error=e,
-                )
+        )
+        kick_success = True
+
+    except TelegramAPIError as e:
+        loguru.logger.info(
+            default_exc_msg.format(
+                telegram_id=telegram_id,
+                error=e,
             )
+        )
 
-        except TelegramRetryAfter as e:
-            if kicked_subs_ids:
-                (Subscription.objects
-                 .filter(id__in=kicked_subs_ids)
-                 .update(is_active=False))
-            loguru.logger.warning(
-                f'Retrying kicking user {telegram_id} '
-                f'after {e.retry_after} seconds'
-            )
-            self.retry(countdown=e.retry_after + 2)
-
-        except TelegramAPIError as e:
-            loguru.logger.info(
-                default_exc_msg.format(
-                    telegram_id=telegram_id,
-                    error=e,
-                )
-            )
-
-        time.sleep(0.04)
-
-        if len(kicked_subs_ids) >= batch_size:
-            (Subscription.objects
-             .filter(id__in=kicked_subs_ids)
-             .update(is_active=False))
-            kicked_subs_ids.clear()
-
-
-    if kicked_subs_ids:
-        (Subscription.objects
-         .filter(id__in=kicked_subs_ids)
-         .update(is_active=False))
+    if kick_success:
+        TelegramUser.objects.filter(
+            telegram_id=telegram_id,
+        ).update(has_channel_access=False)
 
 
 @shared_task(
@@ -93,17 +129,43 @@ def set_subscriptions_inactive_and_kick_users_task(
     max_retries=5,
     base=QueueOnce,
     once={'keys': [], 'unlock_before_retry': True}
-
 )
 def mass_mailing_expires_tomorrow_subscription_task(
         self: Task,
-        expires_tomorrow_telegram_ids: List[int] | None = None,
 ):
-    if not expires_tomorrow_telegram_ids:
-        expires_tomorrow_telegram_ids = Subscription.objects.get_expires_tomorrow_telegram_ids()
+    expires_tomorrow_telegram_users = (
+        Subscription.objects
+        .get_telegram_users_with_expires_tomorrow_subscription()
+    )
 
-    failed_to_send_message_ids = []
-    telegram_client = TelegramBotSyncClient()
+    for telegram_user in expires_tomorrow_telegram_users:
+        send_subscription_expires_tomorrow_message_task.delay(
+            telegram_user_id=telegram_user.id,
+            telegram_id=telegram_user.telegram_id,
+        )
+
+
+
+@shared_task(
+    bind=True,
+    max_retries=5,
+    base=QueueOnce,
+    once={'keys': ['telegram_id'], 'unlock_before_retry': False}
+)
+@telegram_api_task_rate_limit()
+def send_subscription_expires_tomorrow_message_task(
+        self: Task,
+        telegram_user_id: int,
+        telegram_id: int
+):
+    expires_tomorrow_subscription = (
+        Subscription.objects
+        .get_expires_tomorrow_subscription(
+            telegram_user_id=telegram_user_id
+        )
+    )
+    if not expires_tomorrow_subscription:
+        return
 
     default_exc_msg = (
         'Error while sending message to {telegram_id}: "{error}"'
@@ -113,57 +175,30 @@ def mass_mailing_expires_tomorrow_subscription_task(
         'callback_data': ProductType.PRIVATE_CHANNEL_ACCESS.label,
     }]
     text = '⚠ До конца подписки остался 1 день! ️⚠'
+    telegram_client = TelegramBotSyncClient()
 
-    for index, telegram_id in enumerate(expires_tomorrow_telegram_ids):
-        need_to_retry = True
-        try:
-            telegram_client.send_message(
-                chat_id=telegram_id,
-                text=text,
-                reply_markup={'inline_keyboard': inline_keyboard},
-            )
-            need_to_retry = False
-        except (TelegramBadRequest, TelegramForbidden) as e:
-            need_to_retry = False
-            exc_msg = default_exc_msg.format(
-                telegram_id=telegram_id,
-                error=e,
-            )
-            loguru.logger.info(exc_msg)
-
-        except TelegramRetryAfter as e:
-            loguru.logger.warning(
-                f'Retrying sendMessage to {telegram_id} '
-                f'after {e.retry_after} seconds'
-            )
-            failed_to_send_message_ids += (
-                expires_tomorrow_telegram_ids[index:]
-            )
-            self.retry(
-                kwargs={
-                    'expires_tomorrow_telegram_ids': \
-                        failed_to_send_message_ids
-                },
-                countdown=e.retry_after + 1,
-            )
-
-        except TelegramAPIError as e:
-            exc_msg = default_exc_msg.format(
-                telegram_id=telegram_id,
-                error=e,
-            )
-            loguru.logger.error(exc_msg)
-
-        if need_to_retry:
-            failed_to_send_message_ids.append(telegram_id)
-
-        time.sleep(0.04)
-
-    if failed_to_send_message_ids:
-        self.retry(
-            kwargs={
-                'expires_tomorrow_telegram_ids': \
-                    failed_to_send_message_ids
-            },
+    try:
+        execute_with_telegram_retry(
+            task=self,
+            telegram_bot_method=telegram_client.send_message,
+            telegram_bot_method_kwargs={
+                'text': text,
+                'reply_markup': {'inline_keyboard': inline_keyboard},
+            }
         )
+    except (TelegramBadRequest, TelegramForbidden) as e:
+        exc_msg = default_exc_msg.format(
+            telegram_id=telegram_id,
+            error=e,
+        )
+        loguru.logger.info(exc_msg)
+
+    except TelegramAPIError as e:
+        exc_msg = default_exc_msg.format(
+            telegram_id=telegram_id,
+            error=e,
+        )
+        loguru.logger.error(exc_msg)
+
+
 
