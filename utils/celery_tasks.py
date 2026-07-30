@@ -2,6 +2,7 @@ from typing import Tuple, Any, Callable, Optional, Iterable, Mapping, Dict
 
 import loguru
 from celery import Task
+from celery_once import AlreadyQueued
 
 from infrastructure.adapters.telegram.exceptions import (
     TelegramAPIError,
@@ -47,4 +48,22 @@ def execute_with_telegram_retry(
         )
     except TelegramAPIError:
         raise
+
+
+def delay_excepting_already_queued(
+        task: Task,
+        args: Optional[Iterable[Any]] = None,
+        kwargs: Optional[Mapping[str, Any]] = None,
+):
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
+
+    try:
+        task.delay(*args, **kwargs)
+    except AlreadyQueued:
+        loguru.logger.debug(
+            f'Task {task.name} with kwargs {kwargs} already queued. Skipping...',
+        )
 

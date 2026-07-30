@@ -36,11 +36,11 @@ class TelegramUser(
         db_index=True,
     )
 
-    @staticmethod
-    def _get_subscription_model() -> Optional[Type[ModelT]]:
-        return apps.get_model('subscriptions', 'Subscription')
-
     class Manager(AbstractTelegramUser.Manager):
+        @staticmethod
+        def _get_subscription_model() -> Optional[Type[ModelT]]:
+            return apps.get_model('subscriptions', 'Subscription')
+
         def get_telegram_users_with_inactive_subscription(self) -> QuerySet['TelegramUser']:
             Subscription = self._get_subscription_model()
             active_subscription_subquery = Subscription.objects.filter(

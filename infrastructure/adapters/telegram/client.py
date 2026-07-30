@@ -25,7 +25,6 @@ class TelegramBotSyncClient:
     def _raise_error(response_data: Dict[str, Any]) -> NoReturn:
         exc_data = {
             'message': response_data['description'],
-            'error_code': response_data['error_code'],
         }
         match response_data['error_code']:
             case 400:
@@ -55,7 +54,7 @@ class TelegramBotSyncClient:
                 timeout=timeout
             )
         except requests.RequestException as e:
-            raise TelegramNetworkError() from e
+            raise TelegramNetworkError(str(e))
 
         data = response.json()
 

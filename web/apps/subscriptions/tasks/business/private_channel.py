@@ -5,7 +5,7 @@ from typing import List
 import loguru
 from aiogram.types import InlineKeyboardMarkup
 from celery import shared_task, Task
-from celery_once import QueueOnce
+from celery_once import QueueOnce, AlreadyQueued
 from django.conf import settings
 from django.db.models.query import QuerySet
 from django.utils import timezone
@@ -15,7 +15,7 @@ from infrastructure.adapters.telegram.exceptions import (
     TelegramAPIError,
     TelegramBadRequest, TelegramRetryAfter, TelegramForbidden,
 )
-from utils.celery_tasks import execute_with_telegram_retry
+from utils.celery_tasks import execute_with_telegram_retry, delay_excepting_already_queued
 from utils.orm import update_by_batches
 from web.apps.payments.models import ProductType
 from web.apps.subscriptions.models import Subscription
@@ -55,9 +55,12 @@ def mass_kick_telegram_users_from_channel_with_inactive_subscription_task():
     )
 
     for telegram_user in telegram_users_with_inactive_subscription:
-        kick_telegram_user_from_channel.delay(
-            telegram_user.id,
-            telegram_user.telegram_id
+        delay_excepting_already_queued(
+            task=kick_telegram_user_from_channel,
+            kwargs={
+                'telegram_user_id': telegram_user.id,
+                'telegram_id': telegram_user.telegram_id,
+            }
         )
 
 
@@ -134,14 +137,17 @@ def mass_mailing_expires_tomorrow_subscription_task(
         self: Task,
 ):
     expires_tomorrow_telegram_users = (
-        Subscription.objects
+        TelegramUser.objects
         .get_telegram_users_with_expires_tomorrow_subscription()
     )
 
     for telegram_user in expires_tomorrow_telegram_users:
-        send_subscription_expires_tomorrow_message_task.delay(
-            telegram_user_id=telegram_user.id,
-            telegram_id=telegram_user.telegram_id,
+        delay_excepting_already_queued(
+            task=send_subscription_expires_tomorrow_message_task,
+            kwargs={
+                'telegram_user_id': telegram_user.id,
+                'telegram_id': telegram_user.telegram_id,
+            }
         )
 
 
@@ -170,11 +176,11 @@ def send_subscription_expires_tomorrow_message_task(
     default_exc_msg = (
         'Error while sending message to {telegram_id}: "{error}"'
     )
-    inline_keyboard = [{
+    inline_keyboard = [[{
         'text': '💰 Продлить подписку',
         'callback_data': ProductType.PRIVATE_CHANNEL_ACCESS.label,
-    }]
-    text = '⚠ До конца подписки остался 1 день! ️⚠'
+    }]]
+    text = '⚠ До конца подписки остался 1 день ️⚠'
     telegram_client = TelegramBotSyncClient()
 
     try:
@@ -182,6 +188,7 @@ def send_subscription_expires_tomorrow_message_task(
             task=self,
             telegram_bot_method=telegram_client.send_message,
             telegram_bot_method_kwargs={
+                'chat_id': telegram_id,
                 'text': text,
                 'reply_markup': {'inline_keyboard': inline_keyboard},
             }
