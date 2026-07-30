@@ -99,9 +99,6 @@ def kick_telegram_user_from_channel(
         return
 
     telegram_client = TelegramBotSyncClient()
-    default_exc_msg = (
-        'Error while kicking {telegram_id}: "{error}"'
-    )
     until_date = int(time.time()) + 60
     kick_success = False
 
