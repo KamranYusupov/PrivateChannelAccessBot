@@ -154,7 +154,7 @@ async def send_crypto_bot_invoice(
     response = await crypto_bot_api_client.create_invoice(
         currency_type='fiat',
         fiat='RUB',
-        amount=1, #payment.amount,
+        amount=payment.amount,
         accepted_assets='USDT',
         expires_in=settings.CRYPTO_BOT_PAYMENT_EXPIRES_IN_MINUTES * 60,
         payload=json.dumps(invoice_payload),

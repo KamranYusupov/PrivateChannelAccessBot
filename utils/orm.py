@@ -1,7 +1,6 @@
 from typing import Dict, Any, Optional
 
 from django.db.models import Manager
-from utils.iter import batched
 
 def update_by_batches(
         manager: Manager,
