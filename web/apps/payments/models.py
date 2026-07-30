@@ -13,7 +13,7 @@ class MerchantType(models.TextChoices):
 class ProductType(models.TextChoices):
     PRIVATE_CHANNEL_ACCESS = 'private-channel', '🔐 Доступ в приватку'
     FACE_RATE = 'face-rate', '🗿📐 Рейт лица'
-    CONSULTATION = 'consultation', '🧠👨‍💻 Консультация'
+    CONSULTATION = 'consultation', '🧠👨‍💻 Личная работа или связзь с мартином (дорого!)'
 
 
 class PaymentStatus(models.TextChoices):
