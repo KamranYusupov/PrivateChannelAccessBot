@@ -110,9 +110,5 @@ class PaymentUseCase:
                     'merchant_payload',
                 ]
             )
-            TelegramUser.objects.filter(
-                id=telegram_user_id,
-                has_channel_access=False
-            ).update(has_channel_access=True)
 
         return subscription, payment

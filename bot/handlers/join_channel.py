@@ -28,12 +28,17 @@ async def face_control_handler(join_request: ChatJoinRequest):
         )
     )
 
-    if has_active_subscription:
-        await join_request.approve()
-    else:
+    if not has_active_subscription:
         await join_request.decline()
 
         await join_request.bot.send_message(
             chat_id=user_id,
             text='Сначала купи подписку в боте!',
         )
+        return
+
+    if not current_user.has_channel_access:
+        current_user.has_channel_access = True
+        await current_user.asave(update_fields=['has_active_subscription'])
+
+    await join_request.approve()
