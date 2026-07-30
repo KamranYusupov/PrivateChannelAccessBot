@@ -55,6 +55,18 @@ def mass_kick_telegram_users_from_channel_with_inactive_subscription_task():
     )
 
     for telegram_user in telegram_users_with_inactive_subscription:
+        inline_keyboard = [[{
+            'text': '💰 Тарифы',
+            'callback_data': ProductType.PRIVATE_CHANNEL_ACCESS.label,
+        }]]
+        delay_excepting_already_queued(
+            task=send_message_task,
+            kwargs={
+                'text': 'Ваша подписка кончилась!',
+                'chat_id': telegram_user.telegram_id,
+                'reply_markup': {'inline_keyboard': inline_keyboard}
+            }
+        )
         delay_excepting_already_queued(
             task=kick_telegram_user_from_channel,
             kwargs={
@@ -64,9 +76,10 @@ def mass_kick_telegram_users_from_channel_with_inactive_subscription_task():
         )
 
 
+
 @shared_task(
     bind=True,
-    max_retries=5,
+    max_retries=1000,
     base=QueueOnce,
     once={'keys': ['telegram_id'], 'unlock_before_retry': False}
 )
@@ -154,7 +167,7 @@ def mass_mailing_expires_tomorrow_subscription_task(
 
 @shared_task(
     bind=True,
-    max_retries=5,
+    max_retries=1000,
     base=QueueOnce,
     once={'keys': ['telegram_id'], 'unlock_before_retry': False}
 )

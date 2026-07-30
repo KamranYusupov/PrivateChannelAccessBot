@@ -10,7 +10,7 @@ from utils.celery_tasks import execute_with_telegram_retry
 from web.core.redis_init import telegram_api_task_rate_limit
 
 
-@shared_task(bind=True, max_retries=5)
+@shared_task(bind=True, max_retries=1000)
 @telegram_api_task_rate_limit()
 def send_message_task(
         self: Task,
@@ -25,7 +25,7 @@ def send_message_task(
         telegram_bot_method_args=(chat_id, text, reply_markup),
     )
 
-@shared_task(bind=True)
+@shared_task(bind=True, max_retries=1000)
 def delete_message_task(
         self: Task,
         chat_id: int,

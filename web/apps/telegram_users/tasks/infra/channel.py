@@ -4,7 +4,7 @@ from infrastructure.adapters.telegram.client import TelegramBotSyncClient
 from web.core.redis_init import telegram_api_task_rate_limit
 
 
-@shared_task(bind=True, max_retries=5)
+@shared_task(bind=True, max_retries=1000)
 @telegram_api_task_rate_limit()
 def ban_chat_member_task(
         self: Task,
