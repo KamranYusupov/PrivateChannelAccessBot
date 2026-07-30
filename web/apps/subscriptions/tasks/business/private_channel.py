@@ -115,8 +115,17 @@ def kick_telegram_user_from_channel(
                 'until_date': until_date
             }
         )
-        kick_success = True
+        execute_with_telegram_retry(
+            task=self,
+            telegram_bot_method=telegram_client.unban_chat_member,
+            telegram_bot_method_kwargs={
+                'user_id': telegram_id,
+                'chat_id': settings.PRIVATE_CHANNEL_ID,
+                'only_if_banned': True
+            }
+        )
 
+        kick_success = True
     except (TelegramBadRequest, TelegramForbidden) as e:
         loguru.logger.info(
             default_exc_msg.format(
