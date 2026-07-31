@@ -49,7 +49,7 @@ MIDDLEWARE = [
 
 CSRF_TRUSTED_ORIGINS = [
     'https://*.ngrok-free.app',
-    'https://*.duckdns.org'
+    'https://*.duckdns.org',
 ]
 
 USE_X_FORWARDED_HOST = True
