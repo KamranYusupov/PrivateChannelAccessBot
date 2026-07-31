@@ -48,7 +48,7 @@ MIDDLEWARE = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://*.ngrok-free.app'
+    'https://*.ngrok-free.app',
     'https://*.duckdns.org'
 ]
 
