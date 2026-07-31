@@ -43,13 +43,23 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
 
   nginx:
-    build: ./nginx
+    build:
+      context: ./nginx
+      dockerfile: prod.dockerfile
+
     container_name: ${PROJECT_NAME}_nginx
+
     volumes:
-      - static_dir:/app/web/static/  
-      - media_dir:/app/web/media/ 
+      - static_dir:/app/web/static/
+      - media_dir:/app/web/media/
+
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+
     ports:
       - "80:80"
+      - "443:443"
+
     depends_on:
       - web
     networks:
@@ -101,6 +111,15 @@ services:
     container_name: ${PROJECT_NAME}_worker
     command: >
       -A web.core.celery_init worker -l info 
+
+  certbot:
+    image: certbot/certbot
+
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+
+    networks:
       - internal
 
 volumes:
