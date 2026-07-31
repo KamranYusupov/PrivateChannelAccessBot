@@ -102,6 +102,16 @@ services:
     command: >
       -A web.core.celery_init worker -l info 
 
+  certbot:
+    image: certbot/certbot
+
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+
+    networks:
+      - internal
+
 volumes:
   static_dir:
   media_dir:
