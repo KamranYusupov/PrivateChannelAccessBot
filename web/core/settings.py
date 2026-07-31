@@ -52,8 +52,6 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.duckdns.org',
 ]
 
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 ROOT_URLCONF = 'web.core.urls'
 
