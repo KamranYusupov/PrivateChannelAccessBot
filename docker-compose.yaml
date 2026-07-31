@@ -36,13 +36,10 @@ services:
       - .env
     networks:
       - internal
-    ports:
-      - "${DB_PORT}:${DB_PORT}"
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_HOST_AUTH_METHOD: trust
       PGDATA: /var/lib/postgresql/data/pgdata
 
   nginx:
