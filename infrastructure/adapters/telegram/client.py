@@ -1,3 +1,4 @@
+import json
 from io import BufferedReader
 from typing import Any, Dict, Tuple, NoReturn, List, Optional
 
@@ -48,13 +49,24 @@ class TelegramBotSyncClient:
             files: Optional[Dict[str, BufferedReader]] = None,
             timeout: int | Tuple[int, int] = (10, 30),
     ) -> Dict[str, Any]:
+        payload = payload.copy()
+
+        for key in (
+                'reply_markup',
+                'entities',
+                'caption_entities',
+                'link_preview_options',
+        ):
+            if key in payload and payload[key] is not None:
+                payload[key] = json.dumps(payload[key])
+
         try:
             response = requests.request(
                 http_method,
                 f'{self.base_url}{api_method}',
                 data=payload,
-                timeout=timeout,
                 files=files,
+                timeout=timeout,
             )
         except requests.RequestException as e:
             raise TelegramNetworkError(str(e))
