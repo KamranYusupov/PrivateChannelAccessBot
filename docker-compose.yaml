@@ -100,7 +100,8 @@ services:
     hostname: worker
     container_name: ${PROJECT_NAME}_worker
     command: >
-      -A web.core.celery_init worker -l info 
+      -A web.core.celery_init worker -l info
+    networks:
       - internal
 
 volumes:
