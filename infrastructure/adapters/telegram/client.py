@@ -1,4 +1,5 @@
-from typing import Any, Dict, Tuple, NoReturn, List
+from io import BufferedReader
+from typing import Any, Dict, Tuple, NoReturn, List, Optional
 
 import requests
 from django.conf import settings
@@ -44,14 +45,16 @@ class TelegramBotSyncClient:
             http_method: str,
             api_method: str,
             payload: Dict[str, Any],
+            files: Optional[Dict[str, BufferedReader]] = None,
             timeout: int | Tuple[int, int] = (10, 30),
     ) -> Dict[str, Any]:
         try:
             response = requests.request(
                 http_method,
                 f'{self.base_url}{api_method}',
-                json=payload,
-                timeout=timeout
+                data=payload,
+                timeout=timeout,
+                files=files,
             )
         except requests.RequestException as e:
             raise TelegramNetworkError(str(e))
@@ -67,19 +70,21 @@ class TelegramBotSyncClient:
             self,
             api_method: str,
             payload: Dict[str, Any],
+            files: Optional[Dict[str, BufferedReader]] = None,
             timeout: int | Tuple[int, int] = (10, 30),
     ) -> Dict[str, Any]:
         return self._request(
             'POST',
             api_method,
             payload,
-            timeout
+            files,
+            timeout,
         )
 
     def create_chat_invite_link(
-        self,
-        chat_id: int,
-        member_limit: int = 1,
+            self,
+            chat_id: int,
+            member_limit: int = 1,
     ) -> str:
         result = self._request_post(
             'createChatInviteLink',
@@ -91,12 +96,11 @@ class TelegramBotSyncClient:
 
         return result['invite_link']
 
-
     def send_message(
-        self,
-        chat_id: int,
-        text: str,
-        reply_markup: Dict[str, List[Dict[str, str]]] | None = None,
+            self,
+            chat_id: int,
+            text: str,
+            reply_markup: Dict[str, List[Dict[str, str]]] | None = None,
     ) -> Dict[str, Any]:
 
         result = self._request_post(
@@ -111,10 +115,31 @@ class TelegramBotSyncClient:
 
         return result
 
+    def send_document(
+            self,
+            chat_id: int,
+            files: Optional[Dict[str, BufferedReader]] = None,
+            caption: Optional[str] = None,
+            disable_notification: bool = False,
+    ) -> Dict[str, Any]:
+
+        result = self._request_post(
+            'sendDocument',
+            payload={
+                'chat_id': chat_id,
+                'caption': caption,
+                'disable_notification': disable_notification,
+                'parse_mode': 'HTML',
+            },
+            files=files,
+        )
+
+        return result
+
     def delete_message(
-        self,
-        chat_id: int,
-        message_id: int,
+            self,
+            chat_id: int,
+            message_id: int,
     ) -> Dict[str, Any]:
         result = self._request_post(
             'deleteMessage',
@@ -127,11 +152,11 @@ class TelegramBotSyncClient:
         return result
 
     def ban_chat_member(
-        self,
-        chat_id: int,
-        user_id: int,
-        until_date: int | None = None,
-        revoke_messages: bool = False,
+            self,
+            chat_id: int,
+            user_id: int,
+            until_date: int | None = None,
+            revoke_messages: bool = False,
     ) -> Dict[str, Any]:
 
         result = self._request_post(
@@ -147,10 +172,10 @@ class TelegramBotSyncClient:
         return result
 
     def unban_chat_member(
-        self,
-        chat_id: int,
-        user_id: int,
-        only_if_banned: bool = False,
+            self,
+            chat_id: int,
+            user_id: int,
+            only_if_banned: bool = False,
     ) -> Dict[str, Any]:
 
         result = self._request_post(

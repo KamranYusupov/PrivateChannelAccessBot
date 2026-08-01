@@ -8,6 +8,12 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'web.settings')
 app = Celery('web')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
+app.conf.update(
+    imports=app.conf.imports + (
+        'web.core.tasks',
+    )
+)
+
 app.autodiscover_tasks()
 app.conf.ONCE = {
     'backend': 'celery_once.backends.Redis',
@@ -18,22 +24,26 @@ app.conf.ONCE = {
 }
 
 app.conf.beat_schedule = {
+    'send-db-backup': {
+        'task': 'web.core.tasks.db_backup.send_db_backup_task',
+        'schedule': crontab(minute='*/30'),
+    },
     'set-expired-payments': {
         'task': 'web.apps.payments.tasks.business.status.set_expired_payments',
-        'schedule': 60,
+        'schedule': crontab(minute='*/10'),
     },
     'deactivate-subscriptions': {
         'task': (
             'web.apps.subscriptions.tasks.business.private_channel.deactivate_subscriptions_task'
         ),
-        'schedule': 600,
+        'schedule': crontab(minute='*/10'),
     },
     'mass-kick-telegram-users-from-channel-with-inactive-subscription-task': {
         'task': (
             'web.apps.subscriptions.tasks.business'
             '.private_channel.mass_kick_telegram_users_from_channel_with_inactive_subscription_task'
         ),
-        'schedule': 1800,
+        'schedule': crontab(minute='*/30'),
     },
     'mass-mailing-expires-tomorrow-subscription': {
         'task': (

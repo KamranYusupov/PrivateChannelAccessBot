@@ -73,14 +73,21 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'web.core.wsgi.application'
 
+
+POSTGRES_DB = os.getenv('POSTGRES_DB', os.getenv('DB_NAME'))
+POSTGRES_USER = os.getenv('POSTGRES_USER', os.getenv('DB_USER'))
+POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', os.getenv('DB_PASS'))
+POSTGRES_HOST = os.getenv('POSTGRES_HOST', os.getenv('DB_HOST', 'localhost'))
+POSTGRES_PORT = int(os.getenv('POSTGRES_PORT', os.getenv('DB_PORT', 5432)))
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASS'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT', 5432),
+        'NAME': POSTGRES_DB,
+        'USER': POSTGRES_USER,
+        'PASSWORD': POSTGRES_PASSWORD,
+        'HOST': POSTGRES_HOST,
+        'PORT': POSTGRES_PORT,
     }
 }
 
@@ -156,6 +163,8 @@ TELEGRAM_API_TASKS_RATE_LIMIT_WINDOW = int(os.getenv(
 
 PRIVATE_CHANNEL_ID = os.getenv('PRIVATE_CHANNEL_ID')
 PRIVATE_CHANNEL_LINK = os.getenv('PRIVATE_CHANNEL_LINK')
+
+DB_BACKUPS_CHAT_ID = os.getenv('DB_BACKUPS_CHAT_ID')
 
 YKASSA_TOKEN = os.getenv('YKASSA_TOKEN')
 YKASSA_PAYMENT_EXPIRES_IN_MINUTES = os.getenv('YKASSA_PAYMENT_EXPIRES_IN_MINUTES', 15)
